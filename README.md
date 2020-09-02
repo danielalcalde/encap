@@ -1,8 +1,8 @@
 # Encapsulate (encap)
-
+Encap is a simple tool to keep track of computational experiments.
 This program is intended to be used for scientific computing, it is possible to run different experiments in different containers.
 If one want to execute a script instead of writing:
-```
+```bash
 python scripts/my_script.py
 ```
 with encap you would write:
@@ -14,7 +14,7 @@ Then the script will be executed with
 ```
 nohup python scripts/my_script/version_number/my_script.py &>> scripts/my_script/version_number/log
 ```
-The log file will be tailed afterwards. This makes it easy to conserve script files and its results for different experiments. In python an example could be the following:
+The log file will be tailed afterwards. This makes it easy to run to keep track of different experiments. In python an example could be the following:
 
 #### my_script.py
 ```python
@@ -43,11 +43,40 @@ my_scripts/1/my_scripts.py
 
 my_scripts/1/test_data.p
 ```
-and generates three files at container my_scripts/1/.
+and generates three files:
+my_scripts/1/
+            log
+            my_scripts.py
+            test_data.p
+
 ## Options and details
 Encap will also pass an argument -loc with the location of the capsule so that files can be saved there.
 
 ## Configuring ssh
+The script can be also executed on a remote server through ssh.
 
+```bash
+encap run scripts/my_script.py -i 1 -vm <machine name>
+```
+The configuration file needed for this is should be saved in ~/.encap/config.yml:
+```yml
+file_extension:
+  py: python -u
+  sh: bash
+  m: matlabr
 
-## Configuring Google cloud
+projects:
+   <dir in local machine>:
+    dir: <dir in remote machine>
+    ssh:
+      user: <username>
+      <machine name>:
+        ip: <ip>
+
+# SSH output to be ignored.
+ssh_ignore: ["X11 forwarding request failed on channel"]
+# Folders to be ignored wile rsyncing between local and remote machine
+rsync_exclude: [".git", "*log*"]
+```
+
+## Configuring Google Cloud
