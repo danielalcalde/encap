@@ -1,4 +1,4 @@
-# Encapsulate (encap)
+# Encap(encapsulate)
 Encap is a simple tool to keep track of computational experiments.
 This program is intended to be used for scientific computing, it is possible to run different experiments in different containers.
 If one want to execute a script instead of writing:
@@ -44,10 +44,10 @@ my_scripts/1/my_scripts.py
 my_scripts/1/test_data.p
 ```
 and generates three files:
-my_scripts/1/
-            log
-            my_scripts.py
-            test_data.p
+my_scripts/1/  
+            log  
+            my_scripts.py  
+            test_data.p  
 
 ## Options and details
 Encap will also pass an argument -loc with the location of the capsule so that files can be saved there.
