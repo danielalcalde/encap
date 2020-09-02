@@ -39,15 +39,14 @@ gives the output:
 ```
 PID 23968
 Sat Sep 14 01:03:28 CEST 2019
-my_scripts/1/my_scripts.py   
+scripts/1/my_script.py   
 
-my_scripts/1/test_data.p
+my_script/1/test_data.p
 ```
 and generates three files:
-my_scripts/1/  
-            log  
-            my_scripts.py  
-            test_data.p  
+* my_script/1/log
+* my_script/1/my_scripts.py
+* my_script/1/test_data.p
 
 ## Options and details
 Encap will also pass an argument -loc with the location of the capsule so that files can be saved there.
@@ -80,3 +79,4 @@ rsync_exclude: [".git", "*log*"]
 ```
 
 ## Configuring Google Cloud
+TODO
