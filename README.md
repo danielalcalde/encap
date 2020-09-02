@@ -7,12 +7,12 @@ python scripts/my_script.py
 ```
 with encap you would write:
 ```
-encap run scripts/my_script.py -i [version_number]
+encap run scripts/my_script.py -i <version_number>
 ```
-this will create a folder scripts/my_script/version_number and copy the script inside.
+this will create a folder scripts/my_script/<version_number> and copy the script inside.
 Then the script will be executed with
 ```
-nohup python scripts/my_script/version_number/my_script.py &>> scripts/my_script/version_number/log
+nohup python scripts/my_script/<version_number>/my_script.py &>> scripts/my_script/<version_number>/log
 ```
 The log file will be tailed afterwards. This makes it easy to run to keep track of different experiments. In python an example could be the following:
 
