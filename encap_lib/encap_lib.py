@@ -332,9 +332,9 @@ class LocalMachine(Machine):
 
         return run_code_local(command, *args, **kwargs)
 
-    def push(self, name_local, name_target, directory=True, *args, **kwargs):
+    def push(self, name_local, name_target, directory=True, copy_full_dir=True, *args, **kwargs):
         if name_local != name_target:
-            # Upload file to VM
+            # Copy file
 
             i = name_target[::-1].find("/")
             if i == -1:
@@ -348,6 +348,8 @@ class LocalMachine(Machine):
 
             if directory:
                 recursiv = "-r"
+                if not copy_full_dir:
+                    name_local += "/."
             else:
                 recursiv = ""
 
@@ -531,7 +533,7 @@ def get_interpreter_from_file_extension(f):
         return ""
     return settings.config["file_extension"][f]
 
-def file_and_file_extension(a):
+def filename_and_file_extension(a):
     a_split = a.split(".")
     # If there is no .
     if len(a_split) == 1:
@@ -541,11 +543,15 @@ def file_and_file_extension(a):
         file_without_extension = a[:-len(file_extension) - 1]
         return file_without_extension, file_extension
 
+def extract_folder_name(a):
+    a_split = a.split("/")
+    return a_split[-1]
+
 def record_process(vm, name, i):
     remove_process(name, i)
 
     with open(settings.running_processes_file, 'r') as ymlfile:
-        running = yaml.load(ymlfile)
+        running = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
     running["running"] += [[vm, name, i, date.today()]]
     with open(settings.running_processes_file, 'w') as yml_file:
@@ -554,7 +560,7 @@ def record_process(vm, name, i):
 def remove_process(name, i):
     try:
         with open(settings.running_processes_file, 'r') as ymlfile:
-            running = yaml.load(ymlfile)
+            running = yaml.load(ymlfile, Loader=yaml.FullLoader)
     except FileNotFoundError:
         running = {"running": []}
 
@@ -575,3 +581,6 @@ def get_all_processes():
         running = {"running": []}
 
     return running["running"]
+
+def changedir(s):
+    os.chdir(os.path.dirname(os.path.realpath(s)))

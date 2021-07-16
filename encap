@@ -1,38 +1,9 @@
 #!/usr/bin/env python
 
-from argparse import ArgumentParser
-
-parser = ArgumentParser()
-parser.add_argument("mode")
-
-parser.add_argument("target")
-
-parser.add_argument("-i", "--name", dest="i", help="Container name.", default=None)
-
-parser.add_argument("-ic", "--namec", dest="ic", help="Container name to copy to.", default=None)
-
-parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default="")
-
-parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
-
-parser.add_argument("-y", "--yes",
-                    action="store_true", dest="yes", default=False,
-                    help="All promts will be answerd with yes.")
-
-parser.add_argument("-d", "--debug",
-                    action="store_true", dest="debug", default=False,
-                    help="All commands will be printed.")
-
-parser.add_argument("-dr", "--dryrun",
-                    action="store_true", dest="dryrun", default=False,
-                    help="No command will be executed. Also implies debug.")
-
-pargs = parser.parse_args()
-
 import time
 import os
 import encap_lib.encap_settings as settings
-from encap_lib.encap_lib import LocalMachine, get_machine, file_and_file_extension, get_interpreter_from_file_extension
+from encap_lib.encap_lib import LocalMachine, get_machine, filename_and_file_extension, get_interpreter_from_file_extension, extract_folder_name
 from encap_lib.encap_lib import record_process, remove_process
 
 def tail_pull(machine, run_folder_name, pid):
@@ -40,12 +11,13 @@ def tail_pull(machine, run_folder_name, pid):
     machine.run_code(f"rm {run_folder_name}/pid")
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
-# Run the file and save outputs in log, save PID in the file pid.
+# Bash code to run the file and save outputs in log, save PID in the file pid.
 def run(machine, interpreter, target, args, run_folder_name, target_file_path):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
     code = f'''
-    echo "$(date)" &> {run_folder_name}/log
+    date &> {run_folder_name}/log
+    echo "host: $(hostname)" &>> {run_folder_name}/log
     echo "{target_file_path} {pargs.args}  \n" &>> {run_folder_name}/log
     nohup {interpreter} {target_file_path} -loc {run_folder_name}/ {pargs.args} &>> {run_folder_name}/log &
     PID=$!
@@ -56,21 +28,6 @@ def run(machine, interpreter, target, args, run_folder_name, target_file_path):
     print('PID ' + pid)
     return pid
 
-if pargs.debug:
-    settings.debug = True
-if pargs.dryrun:
-    settings.dryrun = True
-
-t1 = time.time()
-local_project_dir = os.getcwd()
-source_file_path = pargs.target
-localmachine = LocalMachine(local_project_dir)
-
-if pargs.vm is not None:
-    machine = get_machine(pargs.vm, local_project_dir=local_project_dir)
-else:
-    machine = localmachine
-
 def get_file_name(folder_name):
     i = folder_name[::-1].find("/")
     if i == -1:
@@ -79,20 +36,7 @@ def get_file_name(folder_name):
         i = len(folder_name) - i
         return folder_name[i:]
 
-
-folder_name, file_extension = file_and_file_extension(source_file_path)
-interpreter = get_interpreter_from_file_extension(file_extension)
-file_name = get_file_name(source_file_path)
-
-run_folder_name = folder_name + "/" + str(pargs.i)
-target_file_path = run_folder_name + "/" + file_name
-
-# TODO
-# See status
-# Create VM and set it up:
-#   Add GPU support
-
-if pargs.mode == "run":
+def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs):
     assert pargs.i is not None
 
     #Syncs folders
@@ -146,14 +90,46 @@ if pargs.mode == "run":
 
     # Also save another file in the folder .encap with PID and run_folderself.
     # The name of the file is the date and time of deployment.
-elif pargs.mode == "rerun":
+
+def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs):
     assert pargs.i is not None
-    # If
-    # Run's the file in -i > log & and save PID in the file pid.
+
     #Syncs folders
     machine.sync_files()
-    machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
+    # Creates folder if it does not exist and checks if the caspsule already exists.
+    code = f'''
+    mkdir -p {folder_name}
+    if [ -d "{run_folder_name}" ]
+    then
+        echo "exists"
+    else
+        mkdir -p {run_folder_name}
+        echo "ok"
+    fi
+    '''
+    out = machine.run_code(code)
+    assert len(out) == 1, str(out)
+    out = out[0]
+
+    if out == "ok":
+        pass
+
+    elif out == "exists":
+        if not pargs.yes:
+            c = input(f"The capsule {run_folder_name} already exists. Do you whish to continue y/n? ")
+            if c == "y" or c == "Y":
+                pass
+            else:
+                quit()
+
+    else:
+        raise Exception(f"Unexpected value {out}.")
+
+    # Copy the local version of pargs.target to the run_folder
+    machine.push(source_file_path, run_folder_name, directory=True, copy_full_dir=False, verbose=True)
+
+    # Run the file and save outputs in log, save PID in the file pid.
     pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
 
     machine.pull(run_folder_name, run_folder_name, directory=True)
@@ -161,155 +137,269 @@ elif pargs.mode == "rerun":
     # Record active process
     record_process(pargs.vm, pargs.target, pargs.i)
 
+    #print("Time ", time.time() - t1)
     tail_pull(machine, run_folder_name, pid)
 
     remove_process(pargs.target, pargs.i)
 
-elif pargs.mode == "tail":
-    code = f"cat {run_folder_name}/pid"
-    out = machine.run_code(code, verbose=True, output=True)
-    print(machine.sync)
-    assert len(out) == 1, out
+    # Also save another file in the folder .encap with PID and run_folderself.
+    # The name of the file is the date and time of deployment.
 
-    if out[0].isdigit():
-        pid = out[0]
-        print(pid)
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    parser.add_argument("mode")
+
+    parser.add_argument("target")
+
+    parser.add_argument("-i", "--name", dest="i", help="Container name.", default=None)
+
+    parser.add_argument("-ic", "--namec", dest="ic", help="Container name to copy to.", default=None)
+
+    parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default="")
+
+    parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
+
+    parser.add_argument("-f", "--file", dest="file", help="In case it is run on a folder this specifies the file that should be run.", default="run.py")
+
+    parser.add_argument("-y", "--yes",
+                        action="store_true", dest="yes", default=False,
+                        help="All promts will be answerd with yes.")
+
+    parser.add_argument("-d", "--debug",
+                        action="store_true", dest="debug", default=False,
+                        help="All commands will be printed.")
+
+    parser.add_argument("-dr", "--dryrun",
+                        action="store_true", dest="dryrun", default=False,
+                        help="No command will be executed. Also implies debug.")
+
+    pargs = parser.parse_args()
+
+    # Read the data in
+    if pargs.debug:
+        settings.debug = True
+    if pargs.dryrun:
+        settings.dryrun = True
+
+    t1 = time.time()
+    local_project_dir = os.getcwd()
+    source_file_path = pargs.target
+    localmachine = LocalMachine(local_project_dir)
+
+    if pargs.vm is not None:
+        machine = get_machine(pargs.vm, local_project_dir=local_project_dir)
+    else:
+        machine = localmachine
+
+    # TODO: add option in the config file to define files that should be run
+    # Check if it will run in folder mode or file mode
+    if os.path.isdir(source_file_path):
+        if source_file_path[-1] == "/":
+            source_file_path = source_file_path[:-1]
+        folder_name = extract_folder_name(source_file_path)
+
+        run_folder_name = f"0encap_folder/{folder_name}/{pargs.i}/"
+        target_file_path = run_folder_name + pargs.file # Note that pargs.file = "run.py" by default
+        
+        _, file_extension = filename_and_file_extension(target_file_path)
+        interpreter = get_interpreter_from_file_extension(file_extension)
+
+        is_file = False
+
+    elif os.path.isfile(source_file_path):
+        folder_name, file_extension = filename_and_file_extension(source_file_path)
+        interpreter = get_interpreter_from_file_extension(file_extension)
+
+        # Get the file name
+        file_name = get_file_name(source_file_path)
+
+        run_folder_name = folder_name + "/" + str(pargs.i)
+        target_file_path = run_folder_name + "/" + file_name
+        is_file = True
+
+
+    else:
+        assert False, f"{source_file_path} is neither a directory nor a file."
+
+    
+    # See status
+    # Create VM and set it up:
+    #   Add GPU support
+
+    if pargs.mode == "run":
+        if is_file:
+            mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs)
+        else:
+            mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs)
+        
+    elif pargs.mode == "rerun":
+        assert pargs.i is not None
+        # If
+        # Run's the file in -i > log & and save PID in the file pid.
+        #Syncs folders
+        machine.sync_files()
+        machine.push(target_file_path, target_file_path, directory=False, verbose=True)
+
+        pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
 
         machine.pull(run_folder_name, run_folder_name, directory=True)
 
+        # Record active process
+        record_process(pargs.vm, pargs.target, pargs.i)
+
         tail_pull(machine, run_folder_name, pid)
+
         remove_process(pargs.target, pargs.i)
 
-    elif  out[0][:4] == "cat:":
+    elif pargs.mode == "tail":
+        code = f"cat {run_folder_name}/pid"
+        out = machine.run_code(code, verbose=True, output=True)
+        print(machine.sync)
+        assert len(out) == 1, out
+
+        if out[0].isdigit():
+            pid = out[0]
+            print(pid)
+
             machine.pull(run_folder_name, run_folder_name, directory=True)
 
-            machine.run_code(f"cat {run_folder_name}/log", verbose=True, output=True)
+            tail_pull(machine, run_folder_name, pid)
+            remove_process(pargs.target, pargs.i)
 
-elif pargs.mode == "last":
+        elif  out[0][:4] == "cat:":
+                machine.pull(run_folder_name, run_folder_name, directory=True)
 
-    code = f'''
-    j=1
-    if [ -d "{folder_name}" ]
-    then
-        while [ -d "{folder_name}/$j" ]
-        do
-            j=$((j+1))
-        done
-        echo $j
-    else
-        if [ -f "{source_file_path}" ]
+                machine.run_code(f"cat {run_folder_name}/log", verbose=True, output=True)
+
+    elif pargs.mode == "last":
+
+        code = f'''
+        j=1
+        if [ -d "{folder_name}" ]
         then
-            echo "NoFolder"
+            while [ -d "{folder_name}/$j" ]
+            do
+                j=$((j+1))
+            done
+            echo $j
         else
-            echo "NoFile"
+            if [ -f "{source_file_path}" ]
+            then
+                echo "NoFolder"
+            else
+                echo "NoFile"
+            fi
         fi
-    fi
-    '''
-    out = localmachine.run_code(code, output=True)
-    print(out)
-    assert len(out) == 1, str(out)
-    out = out[0]
+        '''
+        out = localmachine.run_code(code, output=True)
+        print(out)
+        assert len(out) == 1, str(out)
+        out = out[0]
 
-    if out == "NoFile":
-        print(f"No file with name {source_file_path} exists.")
+        if out == "NoFile":
+            print(f"No file with name {source_file_path} exists.")
 
-    elif out == "NoFolder":
-        print("No folder has been created yet.")
+        elif out == "NoFolder":
+            print("No folder has been created yet.")
+
+        else:
+            ll = int(out) - 1
+            print(f"The last instance that is in the file system is {ll}.")
+
+    elif pargs.mode == "kill":
+        # checks if folder exists, if yes take the pid and kill it.
+        print(run_folder_name)
+        code = f"""
+        if [ -f {run_folder_name}/pid ]
+        then
+            cat {run_folder_name}/pid
+        else
+            echo "NoFolder"
+        fi
+        """
+        pid = machine.run_code(code, verbose=True, output=True)[0]
+        assert not pid == "NoFolder", "The PID file was not found."
+        print(pid)
+        code = f"""
+        kill {pid}
+        rm {run_folder_name}/pid
+        """
+
+        machine.run_code(code, verbose=True, output=True)
+
+    elif pargs.mode == "queue":
+        localmachine.push(source_file_path, folder_name + "/" + pargs.i +"/" + file_name, directory=False, verbose=True)
+        localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
+
+        if pargs.vm is None:
+            assert False
+        code = f"""
+        cd ~/.encap
+        mkdir -p queue
+        cd queue
+        echo "encap rerun {pargs.target} -i {pargs.i} -vm {pargs.vm} -args '{pargs.args}'" &>> {pargs.vm}
+
+        if [[ -a {pargs.vm}_pending ]]
+        then
+            echo "encap rerun {pargs.target} -i {pargs.i} -vm {pargs.vm} -y -args '{pargs.args}'" &>> {pargs.vm}_pending
+        fi
+        """
+        localmachine.run_code(code)
+
+    elif pargs.mode == "runqueue":
+        assert pargs.i is not None
+
+        if pargs.vm is None:
+            assert False
+
+        task_f = f"~/.encap/queue/{pargs.vm}"
+        code = f"""
+        cp {task_f} {task_f}_pending
+
+        while [[ -s {task_f}_pending ]]
+        do
+            echo `head -n 1 {task_f}_pending` > {task_f}_current
+            cat {task_f}_current
+            bash {task_f}_current
+            sed -i '1d' {task_f}_pending
+
+        done
+        rm {task_f}_pending
+        rm {task_f}_current
+        """
+        machine.run_code(code, output=True, verbose=True)
+
+    elif pargs.mode == "pull":
+        assert pargs.i is not None
+        machine.pull(run_folder_name, run_folder_name, directory=True, verbose=True)
+
+    elif pargs.mode == "push":
+        assert pargs.i is not None
+        machine.push(run_folder_name, run_folder_name, directory=True, verbose=True)
+
+    elif pargs.mode == "loadsave":
+        assert pargs.i is not None
+        localmachine.push(source_file_path, folder_name + "/save/" + file_name, directory=False, verbose=True)
+        localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
+
+    elif pargs.mode == "save":
+        assert pargs.i is not None
+        localmachine.push(source_file_path, folder_name + "/" + pargs.i +"/" + file_name, directory=False, verbose=True)
+        localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
+
+    elif pargs.mode == "load":
+        assert pargs.i is not None
+        localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
+
+    elif pargs.mode == "reload":
+        assert pargs.i is not None
+        localmachine.push(folder_name + "/save/" + file_name, source_file_path, directory=False, verbose=True)
+
+    elif pargs.mode == "pkill":
+        machine.run_code(f"pkill -f '{pargs.target}' -u {machine.username}", output=True, verbose=True)
 
     else:
-        ll = int(out) - 1
-        print(f"The last instance that is in the file system is {ll}.")
-
-elif pargs.mode == "kill":
-    # checks if folder exists, if yes take the pid and kill it.
-    code = f"""
-    if [ -f {run_folder_name}/pid ]
-    then
-        cat {run_folder_name}/pid
-    else
-        echo "NoFolder"
-    fi
-    """
-    pid = machine.run_code(code, verbose=True, output=True)[0]
-    assert not pid == "NoFolder"
-    print(pid)
-    code = f"""
-    kill {pid}
-    rm {run_folder_name}/pid
-    """
-
-    machine.run_code(code, verbose=True, output=True)
-
-elif pargs.mode == "queue":
-    localmachine.push(source_file_path, folder_name + "/" + pargs.i +"/" + file_name, directory=False, verbose=True)
-    localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
-
-    if pargs.vm is None:
-        assert False
-    code = f"""
-    cd ~/.encap
-    mkdir -p queue
-    cd queue
-    echo "encap rerun {pargs.target} -i {pargs.i} -vm {pargs.vm} -args '{pargs.args}'" &>> {pargs.vm}
-
-	if [[ -a {pargs.vm}_pending ]]
-	then
-		echo "encap rerun {pargs.target} -i {pargs.i} -vm {pargs.vm} -y -args '{pargs.args}'" &>> {pargs.vm}_pending
-	fi
-    """
-    localmachine.run_code(code)
-
-elif pargs.mode == "runqueue":
-    assert pargs.i is not None
-
-    if pargs.vm is None:
-        assert False
-
-    task_f = f"~/.encap/queue/{pargs.vm}"
-    code = f"""
-    cp {task_f} {task_f}_pending
-
-    while [[ -s {task_f}_pending ]]
-    do
-    	echo `head -n 1 {task_f}_pending` > {task_f}_current
-        cat {task_f}_current
-    	bash {task_f}_current
-    	sed -i '1d' {task_f}_pending
-
-    done
-    rm {task_f}_pending
-    rm {task_f}_current
-    """
-    machine.run_code(code, output=True, verbose=True)
-
-elif pargs.mode == "pull":
-    assert pargs.i is not None
-    machine.pull(run_folder_name, run_folder_name, directory=True, verbose=True)
-
-elif pargs.mode == "push":
-    assert pargs.i is not None
-    machine.push(run_folder_name, run_folder_name, directory=True, verbose=True)
-
-elif pargs.mode == "loadsave":
-    assert pargs.i is not None
-    localmachine.push(source_file_path, folder_name + "/save/" + file_name, directory=False, verbose=True)
-    localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
-
-elif pargs.mode == "save":
-    assert pargs.i is not None
-    localmachine.push(source_file_path, folder_name + "/" + pargs.i +"/" + file_name, directory=False, verbose=True)
-    localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
-
-elif pargs.mode == "load":
-    assert pargs.i is not None
-    localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
-
-elif pargs.mode == "reload":
-    assert pargs.i is not None
-    localmachine.push(folder_name + "/save/" + file_name, source_file_path, directory=False, verbose=True)
-
-elif pargs.mode == "pkill":
-    machine.run_code(f"pkill -f '{pargs.target}' -u {machine.username}", output=True, verbose=True)
-
-else:
-    raise ValueError(f"The mode '{pargs.mode}' is not available.")
+        raise ValueError(f"The mode '{pargs.mode}' is not available.")

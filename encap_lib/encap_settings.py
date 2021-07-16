@@ -22,7 +22,8 @@ if not os.path.isfile(config_file_name):
         yaml.dump(d, ymlfile, default_flow_style=False)
 
 with open(config_file_name, 'r') as ymlfile:
-    config = yaml.load(ymlfile)
+    config = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    
 
 debug = False
 dryrun = False
