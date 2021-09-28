@@ -12,7 +12,7 @@ encap run scripts/my_script.py -i <version_number>
 this will create a folder scripts/my_script/<version_number> and copy the script inside.
 Then the script will be executed with
 ```
-nohup python scripts/my_script/<version_number>/my_script.py &>> scripts/my_script/<version_number>/log
+nohup python scripts/my_script/<version_number>/my_script.py &>> scripts/my_script/<version_number>/log & disown
 ```
 The log file will be tailed afterwards. This makes it easy to run to keep track of different experiments. In python an example could be the following:
 
@@ -47,9 +47,6 @@ and generates three files:
 * my_script/1/log
 * my_script/1/my_script.py
 * my_script/1/test_data.p
-
-## Options and details
-Encap will also pass an argument -loc with the location of the capsule so that files can be saved there.
 
 ## Configuring ssh
 The script can be also executed on a remote server through ssh.

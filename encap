@@ -19,7 +19,7 @@ def run(machine, interpreter, target, args, run_folder_name, target_file_path):
     date &> {run_folder_name}/log
     echo "host: $(hostname)" &>> {run_folder_name}/log
     echo "{target_file_path} {pargs.args}  \n" &>> {run_folder_name}/log
-    nohup {interpreter} {target_file_path} -loc {run_folder_name}/ {pargs.args} &>> {run_folder_name}/log &
+    nohup {interpreter} {target_file_path} {pargs.args} &>> {run_folder_name}/log & disown
     PID=$!
     echo "$PID"
     echo "$PID" > {run_folder_name}/pid
@@ -122,7 +122,6 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path,
                 pass
             else:
                 quit()
-
     else:
         raise Exception(f"Unexpected value {out}.")
 
@@ -144,6 +143,27 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path,
 
     # Also save another file in the folder .encap with PID and run_folderself.
     # The name of the file is the date and time of deployment.
+
+def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs):
+    assert pargs.i is not None
+    # If
+    # Run's the file in -i > log & and save PID in the file pid.
+    #Syncs folders
+    machine.sync_files()
+    machine.push(target_file_path, target_file_path, directory=False, verbose=True)
+
+    pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
+
+    machine.pull(run_folder_name, run_folder_name, directory=True)
+
+    # Record active process
+    record_process(pargs.vm, pargs.target, pargs.i)
+
+    tail_pull(machine, run_folder_name, pid)
+
+    remove_process(pargs.target, pargs.i)
+
+
 
 
 if __name__ == "__main__":
@@ -236,24 +256,8 @@ if __name__ == "__main__":
             mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs)
         
     elif pargs.mode == "rerun":
-        assert pargs.i is not None
-        # If
-        # Run's the file in -i > log & and save PID in the file pid.
-        #Syncs folders
-        machine.sync_files()
-        machine.push(target_file_path, target_file_path, directory=False, verbose=True)
-
-        pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
-
-        machine.pull(run_folder_name, run_folder_name, directory=True)
-
-        # Record active process
-        record_process(pargs.vm, pargs.target, pargs.i)
-
-        tail_pull(machine, run_folder_name, pid)
-
-        remove_process(pargs.target, pargs.i)
-
+        mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs)
+        
     elif pargs.mode == "tail":
         code = f"cat {run_folder_name}/pid"
         out = machine.run_code(code, verbose=True, output=True)
