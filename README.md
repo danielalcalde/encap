@@ -14,7 +14,7 @@ Then the script will be executed with
 ```
 nohup python scripts/my_script/<version_number>/my_script.py &>> scripts/my_script/<version_number>/log & disown
 ```
-The log file will be tailed afterwards. This makes it easy to run to keep track of different experiments. In python an example could be the following:
+The log file will be tailed afterwards. This makes it easy to keep track of different computational experiments. In python an example could be the following:
 
 #### my_script.py
 ```python
