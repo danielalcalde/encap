@@ -54,7 +54,7 @@ The script can be also executed on a remote server through ssh.
 ```bash
 encap run scripts/my_script.py -i 1 -vm <machine name>
 ```
-The configuration file needed for this is should be saved in ~/.encap/config.yml:
+The configuration file is located at ~/.encap/config.yml:
 ```yml
 file_extension:
   py: python -u
