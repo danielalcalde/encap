@@ -12,7 +12,7 @@ encap run scripts/my_script.py -i <version_number>
 this will create a folder scripts/my_script/<version_number> and copy the script inside.
 Then the script will be executed with
 ```
-nohup python scripts/my_script/<version_number>/my_script.py &>> scripts/my_script/<version_number>/log & disown
+nohup time python scripts/my_script/<version_number>/my_script.py &>> scripts/my_script/<version_number>/log & disown
 ```
 The log file will be tailed afterwards. This makes it easy to keep track of different computational experiments. In python an example could be the following:
 

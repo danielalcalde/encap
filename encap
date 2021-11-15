@@ -19,7 +19,7 @@ def run(machine, interpreter, target, args, run_folder_name, target_file_path):
     date &> {run_folder_name}/log
     echo "host: $(hostname)" &>> {run_folder_name}/log
     echo "{target_file_path} {pargs.args}  \n" &>> {run_folder_name}/log
-    nohup {interpreter} {target_file_path} {pargs.args} &>> {run_folder_name}/log & disown
+    nohup time {interpreter} {target_file_path} {pargs.args} &>> {run_folder_name}/log & disown
     PID=$!
     echo "$PID"
     echo "$PID" > {run_folder_name}/pid
