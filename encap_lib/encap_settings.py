@@ -8,7 +8,7 @@ config_file_name = config_folder + "/config.yml"
 running_processes_file = os.getenv("HOME") + "/.encap/running_processes.yml"
 config_items = ["dir", "ip", "sync", "user", "ssh_ignore", "ssh_options", "sync_files",
                 "rsync_exclude", "project", "zone", "nfs", "machine_config",
-                "GOOGLE_APPLICATION_CREDENTIALS", "machine_config"]
+                "GOOGLE_APPLICATION_CREDENTIALS", "machine_config", "slurm"]
 
 # If .encap does not exist
 if not os.path.isdir(config_folder):
@@ -45,3 +45,19 @@ def get_all_items(config_location):
     for item in config_items:
         out[item] = get_item(item, config_location)
     return out
+
+
+def read_settings_from_yml(file_name, settings=None):
+    if settings is None:
+        settings = {}
+    
+    try:
+        with open(file_name, 'r') as ymlfile:
+            config = yaml.load(ymlfile, Loader=yaml.FullLoader)
+            if config is not None:
+                config.update(settings)
+                settings = config
+    except FileNotFoundError:
+        pass
+    
+    return settings

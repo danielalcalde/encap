@@ -75,5 +75,22 @@ ssh_ignore: ["X11 forwarding request failed on channel"]
 rsync_exclude: [".git", "*log*"]
 ```
 
+## Slurm
+Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as an arg.
+```
+encap run slurm_test.py -i test -sln 3 -args " -i \$SLURM_PROCID"
+```
+
+Config file that will restart the slurm job if it did not exit sucessfully.
+```yml
+slurm:
+  account: <accpunt>
+  partition: <partition>
+  cpus-per-task: 256
+  ntasks-per-node: 1
+  time: "24:00:00"
+    code: "timeout 23h srun bash {run_folder_name}/run.sh \n if [[ $? -eq 124 ]]; then \n sbatch {run_folder_name}/run.slurm \n fi"
+```
+
 ## Configuring Google Cloud
 TODO

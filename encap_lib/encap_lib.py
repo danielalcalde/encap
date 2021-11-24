@@ -18,6 +18,13 @@ import subprocess
 class Machine:
     def __init__(self):
         pass
+
+    def write_file(self, name, content, *args, **kwargs):
+        command = f"""
+        echo -e {repr(content)} > "{name}"
+        """
+        return self.run_code(command, *args, **kwargs)
+
     def run_code(self, command, *args, **kwargs):
         pass
 
@@ -72,11 +79,6 @@ class SSHMachine(Machine):
             ignore = self.ssh_ignore
 
         output = run_code_local(c, ignore=ignore, *args, **kwargs)
-
-        if False:
-            time.sleep(1)
-            output = run_code_local(c, ignore=ignore, *args, **kwargs)
-
         return output
 
     def push(self, name_local, name_target, directory=True, *args, **kwargs):
@@ -457,6 +459,8 @@ def get_machine(vm, local_project_dir):
     else:
         raise Exception(f"The VM name '{vm}' does not match any of the ssh instances nor the gcloud signature.")
 
+    machine.settings = settings_project
+    
     return machine
 
 def should_it_be_ignored(string, ignore):
@@ -548,7 +552,7 @@ def extract_folder_name(a):
     return a_split[-1]
 
 def record_process(vm, name, i):
-    remove_process(name, i)
+    remove_process_from_database(name, i)
 
     with open(settings.running_processes_file, 'r') as ymlfile:
         running = yaml.load(ymlfile, Loader=yaml.FullLoader)
@@ -557,7 +561,12 @@ def record_process(vm, name, i):
     with open(settings.running_processes_file, 'w') as yml_file:
         yaml.dump(running, yml_file, default_flow_style=False)
 
-def remove_process(name, i):
+def remove_process_from_database(name, i):
+    """
+    Remove a process from the running processes file.
+    args: name: name of the process
+            i: index of the process
+    """
     try:
         with open(settings.running_processes_file, 'r') as ymlfile:
             running = yaml.load(ymlfile, Loader=yaml.FullLoader)

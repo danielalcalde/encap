@@ -4,11 +4,23 @@ import time
 import os
 import encap_lib.encap_settings as settings
 from encap_lib.encap_lib import LocalMachine, get_machine, filename_and_file_extension, get_interpreter_from_file_extension, extract_folder_name
-from encap_lib.encap_lib import record_process, remove_process
+from encap_lib.encap_lib import record_process, remove_process_from_database
+import yaml
+from encap_lib import slurm
 
-def tail_pull(machine, run_folder_name, pid):
-    machine.run_code(f"tail -f -n +1 --pid={pid} -f {run_folder_name}/log", verbose=True, output=True)
-    machine.run_code(f"rm {run_folder_name}/pid")
+def tail_pull(machine, run_folder_name, pid=None):
+    if pid is not None:
+        machine.run_code(f"tail -f -n +1 --pid={pid} -f {run_folder_name}/log", verbose=True, output=True)
+        machine.run_code(f"rm {run_folder_name}/pid")
+    else:
+        # Runs the tail command until it sees the special character
+        machine.run_code(f"""#!/bin/bash
+while IFS= read -r LOGLINE || [[ -n "$LOGLINE" ]]; do
+    [[ "${{LOGLINE}}" == "{chr(4)}" ]] && exit 0
+    printf '%s\\n' "$LOGLINE"
+done < <(tail -f {run_folder_name}/log)
+""", verbose=True, output=True)
+    
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
 # Bash code to run the file and save outputs in log, save PID in the file pid.
@@ -18,8 +30,8 @@ def run(machine, interpreter, target, args, run_folder_name, target_file_path):
     code = f'''
     date &> {run_folder_name}/log
     echo "host: $(hostname)" &>> {run_folder_name}/log
-    echo "{target_file_path} {pargs.args}  \n" &>> {run_folder_name}/log
-    nohup time {interpreter} {target_file_path} {pargs.args} &>> {run_folder_name}/log & disown
+    echo "{target_file_path} {args}  \n" &>> {run_folder_name}/log
+    nohup bash -c "time {interpreter} {target_file_path} {args}" &>> {run_folder_name}/log & disown
     PID=$!
     echo "$PID"
     echo "$PID" > {run_folder_name}/pid
@@ -27,6 +39,53 @@ def run(machine, interpreter, target, args, run_folder_name, target_file_path):
     pid = machine.run_code(code, output=True)[0]
     print('PID ' + pid)
     return pid
+
+def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings):
+    machine.push(target_file_path, target_file_path, directory=False, verbose=True)
+
+    # Script to run the file and save outputs in log
+    code = f'''
+    #!/bin/bash
+    topme () {{
+        while true; do
+        top -n 1 -b &> {run_folder_name}/.top
+        sleep 10
+        done
+    }}
+    # If $SLURM_PROCID is 0, then the log file is called log
+    if [ "$SLURM_PROCID" == "0" ]
+    then
+        log="{run_folder_name}/log"
+    else
+        log="{run_folder_name}/log_$SLURM_PROCID"
+    fi
+    echo $log
+    echo "Slurm Job" &> $log
+    date &>> $log
+    echo "host: $(hostname)" &>> $log
+    echo "{target_file_path} {args}" &>> $log
+    echo "" &>> $log
+    topme &
+    hPID=$!
+    (time {interpreter} {target_file_path} {args}) &>> $log && echo {chr(4)} &>> $log
+    kill $hPID
+    '''
+
+    # Save the script in the run_folder
+    machine.write_file(run_folder_name + "/run.sh", code, verbose=True)
+
+    code = slurm.generate_slurm_script(run_folder_name, slurm_settings)
+
+    # Delete previous log file and create a new one
+    machine.run_code(f"""rm {run_folder_name}/pid -f
+rm {run_folder_name}/log* -f
+touch {run_folder_name}/log""")
+
+    # Write the slurm file
+    machine.write_file(run_folder_name + "/run.slurm", code, verbose=True)
+
+    # Run the slurm file
+    machine.run_code(f"sbatch {run_folder_name}/run.slurm", verbose=True)
 
 def get_file_name(folder_name):
     i = folder_name[::-1].find("/")
@@ -75,21 +134,7 @@ def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, m
     machine.push(source_file_path, target_file_path, directory=False, verbose=True)
 
     # Run the file and save outputs in log, save PID in the file pid.
-
-    pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
-
-    machine.pull(run_folder_name, run_folder_name, directory=True)
-
-    # Record active process
-    record_process(pargs.vm, pargs.target, pargs.i)
-
-    #print("Time ", time.time() - t1)
-    tail_pull(machine, run_folder_name, pid)
-
-    remove_process(pargs.target, pargs.i)
-
-    # Also save another file in the folder .encap with PID and run_folderself.
-    # The name of the file is the date and time of deployment.
+    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=False)
 
 def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs):
     assert pargs.i is not None
@@ -127,41 +172,59 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path,
 
     # Copy the local version of pargs.target to the run_folder
     machine.push(source_file_path, run_folder_name, directory=True, copy_full_dir=False, verbose=True)
-
+    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=False)
     # Run the file and save outputs in log, save PID in the file pid.
-    pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
+    
 
-    machine.pull(run_folder_name, run_folder_name, directory=True)
-
-    # Record active process
-    record_process(pargs.vm, pargs.target, pargs.i)
-
-    #print("Time ", time.time() - t1)
-    tail_pull(machine, run_folder_name, pid)
-
-    remove_process(pargs.target, pargs.i)
-
-    # Also save another file in the folder .encap with PID and run_folderself.
-    # The name of the file is the date and time of deployment.
-
-def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs):
+def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=True):
     assert pargs.i is not None
-    # If
-    # Run's the file in -i > log & and save PID in the file pid.
-    #Syncs folders
-    machine.sync_files()
-    machine.push(target_file_path, target_file_path, directory=False, verbose=True)
+    
+    saved_settings = {}
+    # Add pargs.args to the saved_settings
+    if pargs.args != "":
+        saved_settings["args"] = pargs.args
 
-    pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
+    if rerun:
+        machine.sync_files()
+        machine.push(target_file_path, target_file_path, directory=False, verbose=True)
+        # Read saved settings in the run_folder
+        saved_settings = settings.read_settings_from_yml(f"{run_folder_name}/.encap_config", saved_settings)
+    
+    if "args" in saved_settings:
+        pargs.args = saved_settings["args"]
+    
+    pid = None
+
+    # Initialize slurm settings from the terminal arguments
+    slurm_settings = slurm.initialize_slurm_settings(pargs)
+
+    # Are we using slurm?
+    if slurm_settings is None:
+        pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
+    else:
+
+        # Read the slurm config file in the run folder if it exsists and it is a rerun
+        if rerun:
+            slurm_settings = slurm.read_slurm_settings_from_yml(f"{run_folder_name}/.slurm_config", slurm_settings)
+        
+        slurm_settings = slurm.read_slurm_settings_from_encapconfig(pargs, local_project_dir, slurm_settings)
+        
+        # Write the updated slurm config into a yml file
+        with open(f"{run_folder_name}/.slurm_config", 'w') as ymlfile:
+            yaml.dump(slurm_settings, ymlfile, default_flow_style=False)
+        
+        with open(f"{run_folder_name}/.encap_config", 'w') as ymlfile:
+            yaml.dump(saved_settings, ymlfile, default_flow_style=False)
+        
+        # Run the SLURM job with the slurm config file
+        run_slurm(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path, slurm_settings)
 
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
     # Record active process
     record_process(pargs.vm, pargs.target, pargs.i)
-
     tail_pull(machine, run_folder_name, pid)
-
-    remove_process(pargs.target, pargs.i)
+    remove_process_from_database(pargs.target, pargs.i)
 
 
 
@@ -173,17 +236,22 @@ if __name__ == "__main__":
     parser.add_argument("mode")
 
     parser.add_argument("target")
-
     parser.add_argument("-i", "--name", dest="i", help="Container name.", default=None)
-
     parser.add_argument("-ic", "--namec", dest="ic", help="Container name to copy to.", default=None)
-
     parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default="")
-
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
-
     parser.add_argument("-f", "--file", dest="file", help="In case it is run on a folder this specifies the file that should be run.", default="run.py")
 
+    # Slurm arguments
+    parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Run the job on slurm. If any slurm option is used this True by default.", default=False)
+    parser.add_argument("-sl_nodes", "--slurm_nodes", dest="sl_nodes", help="Number of nodes to start in slurm. - nodes", default=None)
+    parser.add_argument("-sl_ntpn", "--slurm_ntpn", dest="sl_ntpn", help="Number of tasks per node to start in slurm. - ntasks-per-node", default=None)
+    parser.add_argument("-sl_time", "--slurm_time", dest="sl_time", help="Time to run the job in slurm. - time", default=None)
+    parser.add_argument("-sl_partition", "--slurm_partition", dest="sl_partition", help="Partition to run the job in slurm.", default=None)
+    parser.add_argument("-sl_account", "--slurm_account", dest="sl_account", help="Account to run the job in slurm.", default=None)
+    parser.add_argument("-sl_cpus", "--slurm_cpus", dest="sl_cpus", help="Number of cpus to run the job in slurm. - cpus-per-task", default=None)
+    
+    # Other arguments
     parser.add_argument("-y", "--yes",
                         action="store_true", dest="yes", default=False,
                         help="All promts will be answerd with yes.")
@@ -258,6 +326,7 @@ if __name__ == "__main__":
     elif pargs.mode == "rerun":
         mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs)
         
+        
     elif pargs.mode == "tail":
         code = f"cat {run_folder_name}/pid"
         out = machine.run_code(code, verbose=True, output=True)
@@ -271,7 +340,7 @@ if __name__ == "__main__":
             machine.pull(run_folder_name, run_folder_name, directory=True)
 
             tail_pull(machine, run_folder_name, pid)
-            remove_process(pargs.target, pargs.i)
+            remove_process_from_database(pargs.target, pargs.i)
 
         elif  out[0][:4] == "cat:":
                 machine.pull(run_folder_name, run_folder_name, directory=True)
