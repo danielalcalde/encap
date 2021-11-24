@@ -1,18 +1,23 @@
 # Encap (encapsulate)
 Encap is a simple tool to keep track of computational experiments.
-This program is intended to be used for scientific computing, it is possible to run different experiments in different containers.
+This program is intended to be used for scientific computing, it is possible to run different experiments in different containers and keep track of the results.
+
+I currently has support for:
+* Running experiments locally/remotely thourgh ssh
+* Running experiments through SLURM
+
 If one want to execute a script instead of writing:
 ```bash
 python scripts/my_script.py
 ```
 with encap you would write:
 ```
-encap run scripts/my_script.py -i <version_number>
+encap run scripts/my_script.py -i <version_name>
 ```
-this will create a folder scripts/my_script/<version_number> and copy the script inside.
+this will create a folder scripts/my_script/<version_name> and copy the script inside.
 Then the script will be executed with
 ```
-nohup time python scripts/my_script/<version_number>/my_script.py &>> scripts/my_script/<version_number>/log & disown
+nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
 ```
 The log file will be tailed afterwards. This makes it easy to keep track of different computational experiments. In python an example could be the following:
 
@@ -76,7 +81,7 @@ rsync_exclude: [".git", "*log*"]
 ```
 
 ## Slurm
-Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as an arg.
+Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as the -i argument.
 ```
 encap run slurm_test.py -i test -sln 3 -args " -i \$SLURM_PROCID"
 ```
@@ -84,7 +89,7 @@ encap run slurm_test.py -i test -sln 3 -args " -i \$SLURM_PROCID"
 Config file that will restart the slurm job if it did not exit sucessfully.
 ```yml
 slurm:
-  account: <accpunt>
+  account: <account>
   partition: <partition>
   cpus-per-task: 256
   ntasks-per-node: 1
