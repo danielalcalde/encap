@@ -2,7 +2,7 @@
 Encap is a simple tool to keep track of computational experiments.
 This program is intended to be used for scientific computing, it is possible to run different experiments in different containers and keep track of the results.
 
-I currently has support for:
+It currently has support for:
 * Running experiments locally/remotely thourgh ssh
 * Running experiments through SLURM
 
@@ -64,7 +64,6 @@ The configuration file is located at ~/.encap/config.yml:
 file_extension:
   py: python -u
   sh: bash
-  m: matlabr
 
 projects:
    <dir in local machine>:
@@ -86,7 +85,7 @@ Example encap invocation that will execute slurm with 3 nodes and will pass the 
 encap run slurm_test.py -i test -sln 3 -args " -i \$SLURM_PROCID"
 ```
 
-Config file that will restart the slurm job if it did not exit sucessfully.
+Example config file that will restart the slurm job if it did not exit sucessfully.
 ```yml
 slurm:
   account: <account>
@@ -94,7 +93,7 @@ slurm:
   cpus-per-task: 256
   ntasks-per-node: 1
   time: "24:00:00"
-    code: "timeout 23h srun bash {run_folder_name}/run.sh \n if [[ $? -eq 124 ]]; then \n sbatch {run_folder_name}/run.slurm \n fi"
+  code: "timeout 23h srun bash {run_folder_name}/run.sh \n if [[ $? -eq 124 ]]; then \n sbatch {run_folder_name}/run.slurm \n fi"
 ```
 
 ## Configuring Google Cloud

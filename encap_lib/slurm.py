@@ -1,5 +1,6 @@
 import encap_lib.encap_settings as settings
 import yaml
+import sys
 
 def generate_slurm_script(run_folder_name, slurm_settings):
     """ Generate slurm script for a given settings.
@@ -59,7 +60,11 @@ def read_slurm_settings_from_encapconfig(pargs, local_project_dir, slurm_setting
         else:
             slurm_settings2 = settings.get_item("slurm", ["projects", local_project_dir])
     except KeyError:
-        slurm_settings2 = settings.config["slurm"]
+        if "slurm" in settings.config:
+            slurm_settings2 = settings.config["slurm"]
+        else:
+            sys.exit("No slurm settings found in ~/.encap/config.yml")
+        
     slurm_settings2.update(slurm_settings)
     return slurm_settings2
 

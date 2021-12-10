@@ -46,12 +46,6 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_p
     # Script to run the file and save outputs in log
     code = f'''
     #!/bin/bash
-    topme () {{
-        while true; do
-        top -n 1 -b &> {run_folder_name}/.top
-        sleep 10
-        done
-    }}
     # If $SLURM_PROCID is 0, then the log file is called log
     if [ "$SLURM_PROCID" == "0" ]
     then
@@ -65,7 +59,6 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_p
     echo "host: $(hostname)" &>> $log
     echo "{target_file_path} {args}" &>> $log
     echo "" &>> $log
-    topme &
     hPID=$!
     (time {interpreter} {target_file_path} {args}) &>> $log && echo {chr(4)} &>> $log
     kill $hPID
@@ -393,15 +386,16 @@ if __name__ == "__main__":
             echo "NoFolder"
         fi
         """
-        pid = machine.run_code(code, verbose=True, output=True)[0]
+        pid = machine.run_code(code, verbose=False, output=True)[0]
         assert not pid == "NoFolder", "The PID file was not found."
-        print(pid)
         code = f"""
         kill {pid}
         rm {run_folder_name}/pid
         """
 
         machine.run_code(code, verbose=True, output=True)
+        print("Killed process:", pid)
+        print("Currently killing is not supported.")
 
     elif pargs.mode == "queue":
         localmachine.push(source_file_path, folder_name + "/" + pargs.i +"/" + file_name, directory=False, verbose=True)

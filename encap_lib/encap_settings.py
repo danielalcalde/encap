@@ -1,5 +1,7 @@
 import os
 import yaml
+import sys
+
 config_folder = os.getenv("HOME") + "/.encap"
 temp_file = config_folder + "/temp"
 
@@ -22,7 +24,11 @@ if not os.path.isfile(config_file_name):
         yaml.dump(d, ymlfile, default_flow_style=False)
 
 with open(config_file_name, 'r') as ymlfile:
-    config = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    try:
+        config = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    except yaml.YAMLError as exc:
+        print("Error in configuration file")
+        sys.exit(exc)
     
 
 debug = False
