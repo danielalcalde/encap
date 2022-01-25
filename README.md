@@ -93,8 +93,10 @@ slurm:
   cpus-per-task: 256
   ntasks-per-node: 1
   time: "24:00:00"
-  code: "timeout 23h srun bash {run_folder_name}/run.sh \n if [[ $? -eq 124 ]]; then \n sbatch {run_folder_name}/run.slurm \n fi"
+  code: "timeout 23h srun bash {run.sh} \n if [[ $? -eq 124 ]]; then \n sbatch {run.slurm} \n fi"
 ```
+
+{run.sh} and {run.slurm} will be replaced with the actual script and slurm file.
 
 ## Configuring Google Cloud
 TODO

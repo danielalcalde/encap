@@ -2,18 +2,32 @@ import encap_lib.encap_settings as settings
 import yaml
 import sys
 
-def generate_slurm_script(run_folder_name, slurm_settings):
+def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=None, executable_file_name=None, log_file_name=None, args=None):
     """ Generate slurm script for a given settings.
     args: run_folder_name, slurm_settings
     return: slurm script string
     """
-
+    if executable_file_name is None:
+        executable_file_name = f"{run_folder_name}/run.sh"
+    
+    if runslurm_file_name is None:
+        runslurm_file_name = f"{run_folder_name}/run.slurm"
+    
+    if log_file_name is None:
+        log_file_name = f"{run_folder_name}/log.slurm"
+    
+    if args is None:
+        args = ""
+    else:
+        args = "_" + args.replace(" ", "_")
+    
+    
     # Generate the slurm file
     code = f"""#!/bin/bash
-#SBATCH --job-name={run_folder_name}
-#SBATCH --output={run_folder_name}/log.slurm
-#SBATCH --error={run_folder_name}/log.slurm\n"""
-    exceptions = ["code"]
+#SBATCH --job-name={run_folder_name}{args}
+#SBATCH --output={log_file_name}
+#SBATCH --error={log_file_name}\n"""
+    exceptions = ["code", "i"]
 
     for key, value in slurm_settings.items():
         if not key in exceptions:
@@ -23,11 +37,45 @@ def generate_slurm_script(run_folder_name, slurm_settings):
         code += f'#SBATCH --time=24:00:00\n'
     
     if slurm_settings.get("code") is None:
-        code += f"srun bash {run_folder_name}/run.sh"
+        code += f"srun bash {executable_file_name}"
     else:
-        code += slurm_settings.get("code").replace("{run_folder_name}", f"{run_folder_name}")
+        c = slurm_settings.get("code")
+        c = c.replace("{run_folder_name}", run_folder_name)
+        c = c.replace("{i}", f"{slurm_settings.get('i')}")
+        c = c.replace("{run.slurm}", runslurm_file_name)
+        c = c.replace("{run.sh}", executable_file_name)
+        code += c
 
     return code
+
+def generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, slurm_instance=0):
+    """ Generate slurm executable.
+    """
+    if slurm_instance == 0:
+        slurm_instance_text = ""
+    else:
+        slurm_instance_text = f"_{slurm_instance}"
+
+    args = args.replace("{i}", f"{slurm_instance}")
+
+        
+    code = f'''#!/bin/bash
+    # If $SLURM_PROCID is 0, then the log file is called log
+    if [ "$SLURM_PROCID" == "0" ]
+    then
+        log="{run_folder_name}/log{slurm_instance_text}"
+    else
+        log="{run_folder_name}/log{slurm_instance_text}_$SLURM_PROCID"
+    fi
+    echo $log
+    echo "Slurm Job Id: $SLURM_JOB_ID" &> $log
+    date &>> $log
+    echo "host: $(hostname)" &>> $log
+    echo "{target_file_path} {args}" &>> $log
+    echo "" &>> $log
+    (time {interpreter} {target_file_path} {args}) &>> $log && echo {chr(4)} &>> $log
+    '''
+    return code, args
 
 def initialize_slurm_settings(pargs):
     slurm_settings = {}
@@ -43,6 +91,8 @@ def initialize_slurm_settings(pargs):
         slurm_settings["account"] = pargs.sl_account
     if pargs.sl_cpus is not None:
         slurm_settings["cpus-per-task"] = pargs.sl_cpus
+    if pargs.sl_i is not None:
+        slurm_settings["i"] = pargs.sl_i
     
     if len(slurm_settings) == 0:
         if not pargs.slurm:

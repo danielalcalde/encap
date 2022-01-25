@@ -43,42 +43,36 @@ def run(machine, interpreter, target, args, run_folder_name, target_file_path):
 def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
-    # Script to run the file and save outputs in log
-    code = f'''
-    #!/bin/bash
-    # If $SLURM_PROCID is 0, then the log file is called log
-    if [ "$SLURM_PROCID" == "0" ]
-    then
-        log="{run_folder_name}/log"
-    else
-        log="{run_folder_name}/log_$SLURM_PROCID"
-    fi
-    echo $log
-    echo "Slurm Job" &> $log
-    date &>> $log
-    echo "host: $(hostname)" &>> $log
-    echo "{target_file_path} {args}" &>> $log
-    echo "" &>> $log
-    hPID=$!
-    (time {interpreter} {target_file_path} {args}) &>> $log && echo {chr(4)} &>> $log
-    kill $hPID
-    '''
-
-    # Save the script in the run_folder
-    machine.write_file(run_folder_name + "/run.sh", code, verbose=True)
-
-    code = slurm.generate_slurm_script(run_folder_name, slurm_settings)
-
     # Delete previous log file and create a new one
     machine.run_code(f"""rm {run_folder_name}/pid -f
-rm {run_folder_name}/log* -f
-touch {run_folder_name}/log""")
+    rm {run_folder_name}/log* -f
+    touch {run_folder_name}/log""")
 
-    # Write the slurm file
-    machine.write_file(run_folder_name + "/run.slurm", code, verbose=True)
+    # Create the slurm script for all slurm instances
+    for i in range(slurm_settings["i"]):
+        if i == 0:
+            slurm_instance_text = ""
+        else:
+            slurm_instance_text = f"_{i}"
+        
+        runslurm_file_name = f"{run_folder_name}/run{slurm_instance_text}.slurm"
+        executable_file_name = f"{run_folder_name}/run{slurm_instance_text}.sh"
+        log_file_name = f"{run_folder_name}/log{slurm_instance_text}.slurm"
 
-    # Run the slurm file
-    machine.run_code(f"sbatch {run_folder_name}/run.slurm", verbose=True)
+        # Script to run the file and save outputs in log
+        code, args_replace = slurm.generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, slurm_instance=i)
+
+        # Save the script in the run_folder
+        machine.write_file(executable_file_name, code, verbose=True)
+
+        # Generate the slurm settings script
+        code = slurm.generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name, executable_file_name, log_file_name, args_replace)
+
+        # Write the slurm file
+        machine.write_file(runslurm_file_name, code, verbose=True)
+
+        # Run the slurm file
+        machine.run_code(f"sbatch {runslurm_file_name}", verbose=True)
 
 def get_file_name(folder_name):
     i = folder_name[::-1].find("/")
@@ -237,12 +231,13 @@ if __name__ == "__main__":
 
     # Slurm arguments
     parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Run the job on slurm. If any slurm option is used this True by default.", default=False)
-    parser.add_argument("-sl_nodes", "--slurm_nodes", dest="sl_nodes", help="Number of nodes to start in slurm. - nodes", default=None)
-    parser.add_argument("-sl_ntpn", "--slurm_ntpn", dest="sl_ntpn", help="Number of tasks per node to start in slurm. - ntasks-per-node", default=None)
+    parser.add_argument("-sl_nodes", "--slurm_nodes", dest="sl_nodes", help="Number of nodes to start in slurm. - nodes", default=None, type=int)
+    parser.add_argument("-sl_ntpn", "--slurm_ntpn", dest="sl_ntpn", help="Number of tasks per node to start in slurm. - ntasks-per-node", default=None, type=int)
     parser.add_argument("-sl_time", "--slurm_time", dest="sl_time", help="Time to run the job in slurm. - time", default=None)
     parser.add_argument("-sl_partition", "--slurm_partition", dest="sl_partition", help="Partition to run the job in slurm.", default=None)
     parser.add_argument("-sl_account", "--slurm_account", dest="sl_account", help="Account to run the job in slurm.", default=None)
-    parser.add_argument("-sl_cpus", "--slurm_cpus", dest="sl_cpus", help="Number of cpus to run the job in slurm. - cpus-per-task", default=None)
+    parser.add_argument("-sl_cpus", "--slurm_cpus", dest="sl_cpus", help="Number of cpus to run the job in slurm. - cpus-per-task", default=None, type=int)
+    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start.", default=None, type=int)
     
     # Other arguments
     parser.add_argument("-y", "--yes",
