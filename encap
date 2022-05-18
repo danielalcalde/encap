@@ -237,7 +237,7 @@ if __name__ == "__main__":
     parser.add_argument("-sl_partition", "--slurm_partition", dest="sl_partition", help="Partition to run the job in slurm.", default=None)
     parser.add_argument("-sl_account", "--slurm_account", dest="sl_account", help="Account to run the job in slurm.", default=None)
     parser.add_argument("-sl_cpus", "--slurm_cpus", dest="sl_cpus", help="Number of cpus to run the job in slurm. - cpus-per-task", default=None, type=int)
-    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start.", default=None, type=int)
+    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start. If you use {i} in args it will be replaced by the index number of the slurm instance.", default=None, type=int)
     
     # Other arguments
     parser.add_argument("-y", "--yes",

@@ -98,6 +98,9 @@ def initialize_slurm_settings(pargs):
         if not pargs.slurm:
             return None
     
+    if not ("i" in slurm_settings):
+        slurm_settings["i"] = 1
+    
     return slurm_settings
 
 def read_slurm_settings_from_encapconfig(pargs, local_project_dir, slurm_settings=None):

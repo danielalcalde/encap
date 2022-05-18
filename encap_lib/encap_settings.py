@@ -23,13 +23,27 @@ if not os.path.isfile(config_file_name):
     with open(config_file_name, 'w') as ymlfile:
         yaml.dump(d, ymlfile, default_flow_style=False)
 
+
+# Try to find a .encap file in parent directories
+path = os.getcwd()
+rest = "a"
+while rest != "":
+    path, rest = os.path.split(path)
+    file_path = os.path.join(path, rest, ".encap")
+    if os.path.isfile(file_path):
+        config_file_name = file_path
+        break
+
+# Open config file
 with open(config_file_name, 'r') as ymlfile:
     try:
         config = yaml.load(ymlfile, Loader=yaml.FullLoader)
     except yaml.YAMLError as exc:
         print("Error in configuration file")
         sys.exit(exc)
-    
+
+
+
 
 debug = False
 dryrun = False

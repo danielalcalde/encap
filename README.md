@@ -78,6 +78,7 @@ ssh_ignore: ["X11 forwarding request failed on channel"]
 # Folders to be ignored wile rsyncing between local and remote machine
 rsync_exclude: [".git", "*log*"]
 ```
+Alternatievly the config file can also be saved in the same folder as the encap script with the name .encap .
 
 ## Slurm
 Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as the -i argument.
