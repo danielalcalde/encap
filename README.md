@@ -97,7 +97,7 @@ slurm:
   code: "timeout 23h srun bash {run.sh} \n if [[ $? -eq 124 ]]; then \n sbatch {run.slurm} \n fi"
 ```
 
-{run.sh} and {run.slurm} will be replaced with the actual script and slurm file.
+{run.sh} and {run.slurm} will be replaced with the actual script and slurm file upon execution.
 
 ## Configuring Google Cloud
 TODO
