@@ -54,7 +54,9 @@ and generates three files:
 * my_script/1/test_data.p
 
 ## Installation
-`pip install git+https://github.com/danielalcalde/encap`
+```bash
+pip install git+https://github.com/danielalcalde/encap
+```
 
 ## Configuring ssh
 The script can be also executed on a remote server through ssh.
