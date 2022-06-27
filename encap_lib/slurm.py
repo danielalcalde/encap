@@ -92,14 +92,17 @@ def initialize_slurm_settings(pargs):
     if pargs.sl_cpus is not None:
         slurm_settings["cpus-per-task"] = pargs.sl_cpus
     if pargs.sl_i is not None:
-        slurm_settings["i"] = pargs.sl_i
+        if isinstance(pargs.sl_i, int):
+            slurm_settings["i"] = list(range(pargs.sl_i))
+        else:
+            slurm_settings["i"] = list(pargs.sl_i)
     
     if len(slurm_settings) == 0:
         if not pargs.slurm:
             return None
     
     if not ("i" in slurm_settings):
-        slurm_settings["i"] = 1
+        slurm_settings["i"] = list(range(1))
     
     return slurm_settings
 

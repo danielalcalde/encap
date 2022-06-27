@@ -49,7 +49,7 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_p
     touch {run_folder_name}/log""")
 
     # Create the slurm script for all slurm instances
-    for i in range(slurm_settings["i"]):
+    for i in slurm_settings["i"]:
         if i == 0:
             slurm_instance_text = ""
         else:
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     parser.add_argument("-sl_partition", "--slurm_partition", dest="sl_partition", help="Partition to run the job in slurm.", default=None)
     parser.add_argument("-sl_account", "--slurm_account", dest="sl_account", help="Account to run the job in slurm.", default=None)
     parser.add_argument("-sl_cpus", "--slurm_cpus", dest="sl_cpus", help="Number of cpus to run the job in slurm. - cpus-per-task", default=None, type=int)
-    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start. If you use {i} in args it will be replaced by the index number of the slurm instance.", default=None, type=int)
+    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start. If you use {i} in args it will be replaced by the index number of the slurm instance. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20)", default=None, type=eval)
     
     # Other arguments
     parser.add_argument("-y", "--yes",

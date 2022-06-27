@@ -535,7 +535,10 @@ def create_machine(vm, core_number, memory, image, zone, project, flags, preempt
 def get_interpreter_from_file_extension(f):
     if f == "":
         return ""
+    assert f in settings.config["file_extension"], f"{f} is not a file extension that is present in your config file."
+    
     return settings.config["file_extension"][f]
+    
 
 def filename_and_file_extension(a):
     a_split = a.split(".")

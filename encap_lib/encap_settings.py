@@ -18,7 +18,7 @@ if not os.path.isdir(config_folder):
 
 # If .encap/config.yml does not exist
 if not os.path.isfile(config_file_name):
-    f = {"py": "python -u", "sh": "bash"}
+    f = {"py": "python -u", "sh": "bash", "jl": "julia"}
     d = {"file_extension": f}
     with open(config_file_name, 'w') as ymlfile:
         yaml.dump(d, ymlfile, default_flow_style=False)
