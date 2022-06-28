@@ -221,7 +221,7 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument("mode", help="The mode of the program. Either run, rerun or kill.")
+    parser.add_argument("mode", help="The mode of the program. Either run, rerun, tail or kill.")
 
     parser.add_argument("target", help="Name of the file to run.")
     parser.add_argument("-n", "--name", dest="name", help="Container name.", default=None)
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--file", dest="file", help="In case it is run on a folder this specifies the file that should be run.", default="run.py")
 
     # Slurm arguments
-    parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Run the job on slurm. If any slurm option is used this True by default.", default=False)
+    parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Run the job on slurm. If any slurm option is used this is True by default.", default=False)
     parser.add_argument("-sl_nodes", "--slurm_nodes", dest="sl_nodes", help="Number of nodes to start in slurm. - nodes", default=None, type=int)
     parser.add_argument("-sl_ntpn", "--slurm_ntpn", dest="sl_ntpn", help="Number of tasks per node to start in slurm. - ntasks-per-node", default=None, type=int)
     parser.add_argument("-sl_time", "--slurm_time", dest="sl_time", help="Time to run the job in slurm. - time", default=None)

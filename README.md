@@ -57,9 +57,33 @@ and generates three files:
 ```bash
 pip install git+https://github.com/danielalcalde/encap
 ```
+## Slurm
+Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as the -i argument.
+```
+encap run slurm_test.py -n test -sln 3 -args " -i \$SLURM_PROCID"
+```
+The configuration file is located at ~/.encap/config.yml.
+
+Example config file that will restart the slurm job if it did not exit sucessfully.
+```yml
+slurm:
+  account: <account>
+  partition: <partition>
+  cpus-per-task: 256
+  ntasks-per-node: 1
+  time: "24:00:00"
+  code:
+    - timeout 23h srun bash {run.sh}
+    - if [[ $? -eq 124 ]]; then
+    - sbatch {run.slurm}
+    - fi
+```
+
+{run.sh} and {run.slurm} will be replaced with the actual script and slurm file upon execution.
+
 
 ## Configuring ssh
-The script can be also executed on a remote server through ssh.
+The script can be also executed on a remote server through ssh. For this a mirror of the local folder is created on the remote server.
 
 ```bash
 encap run scripts/my_script.py -name <version_name> -vm <machine name>
@@ -84,29 +108,6 @@ ssh_ignore: ["X11 forwarding request failed on channel"]
 rsync_exclude: [".git", "*log*"]
 ```
 Alternatievly the config file can also be saved in the same folder as the encap script with the name .encap .
-
-## Slurm
-Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as the -i argument.
-```
-encap run slurm_test.py -n test -sln 3 -args " -i \$SLURM_PROCID"
-```
-
-Example config file that will restart the slurm job if it did not exit sucessfully.
-```yml
-slurm:
-  account: <account>
-  partition: <partition>
-  cpus-per-task: 256
-  ntasks-per-node: 1
-  time: "24:00:00"
-  code:
-    - timeout 23h srun bash {run.sh}
-    - if [[ $? -eq 124 ]]; then
-    - sbatch {run.slurm}
-    - fi
-```
-
-{run.sh} and {run.slurm} will be replaced with the actual script and slurm file upon execution.
 
 ## Configuring Google Cloud
 TODO
