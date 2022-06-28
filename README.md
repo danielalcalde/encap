@@ -53,6 +53,11 @@ and generates three files:
 * my_script/1/my_script.py
 * my_script/1/test_data.p
 
+## Installation
+```bash
+pip install git+https://github.com/danielalcalde/encap
+```
+
 ## Configuring ssh
 The script can be also executed on a remote server through ssh.
 
@@ -101,7 +106,7 @@ slurm:
     - fi
 ```
 
-{run.sh} and {run.slurm} will be replaced with the actual script and slurm file.
+{run.sh} and {run.slurm} will be replaced with the actual script and slurm file upon execution.
 
 ## Configuring Google Cloud
 TODO
