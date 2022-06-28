@@ -24,14 +24,15 @@ done < <(tail -f {run_folder_name}/log)
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
 # Bash code to run the file and save outputs in log, save PID in the file pid.
-def run(machine, interpreter, target, args, run_folder_name, target_file_path):
+def run(machine, interpreter, target, args, run_folder_name, target_file_path, interprter_args=""):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
-
+    log = f"{run_folder_name}/log"
     code = f'''
-    date &> {run_folder_name}/log
-    echo "host: $(hostname)" &>> {run_folder_name}/log
-    echo "{target_file_path} {args}  \n" &>> {run_folder_name}/log
-    nohup bash -c "time {interpreter} {target_file_path} {args}" &>> {run_folder_name}/log & disown
+    date &> {log}
+    echo "host: $(hostname)" &>> {log}
+    echo "{target_file_path} {args}  \n" &>> {log}
+    # Tee avoids buffering
+    nohup bash -c "time {interpreter} {interprter_args} {target_file_path} {args} 2>&1 | tee -a /dev/null" &>> {log} & disown
     PID=$!
     echo "$PID"
     echo "$PID" > {run_folder_name}/pid
@@ -40,7 +41,7 @@ def run(machine, interpreter, target, args, run_folder_name, target_file_path):
     print('PID ' + pid)
     return pid
 
-def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings):
+def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings, interpreter_args=""):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
     # Delete previous log file and create a new one
@@ -82,7 +83,7 @@ def get_file_name(folder_name):
         i = len(folder_name) - i
         return folder_name[i:]
 
-def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs):
+def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.i is not None
 
     #Syncs folders
@@ -123,7 +124,7 @@ def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, m
     # Run the file and save outputs in log, save PID in the file pid.
     mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=False)
 
-def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs):
+def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.i is not None
 
     #Syncs folders
@@ -163,7 +164,7 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path,
     # Run the file and save outputs in log, save PID in the file pid.
     
 
-def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=True):
+def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
     assert pargs.i is not None
     
     saved_settings = {}
@@ -269,8 +270,7 @@ if __name__ == "__main__":
         machine = get_machine(pargs.vm, local_project_dir=local_project_dir)
     else:
         machine = localmachine
-
-    # TODO: add option in the config file to define files that should be run
+    
     # Check if it will run in folder mode or file mode
     if os.path.isdir(source_file_path):
         if source_file_path[-1] == "/":

@@ -40,6 +40,11 @@ def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=No
         code += f"srun bash {executable_file_name}"
     else:
         c = slurm_settings.get("code")
+        
+        if isinstance(c, list):
+            c = "\n".join(c) 
+
+
         c = c.replace("{run_folder_name}", run_folder_name)
         c = c.replace("{i}", f"{slurm_settings.get('i')}")
         c = c.replace("{run.slurm}", runslurm_file_name)
@@ -48,7 +53,7 @@ def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=No
 
     return code
 
-def generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, slurm_instance=0):
+def generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, slurm_instance=0, interpreter_args=""):
     """ Generate slurm executable.
     """
     if slurm_instance == 0:
@@ -73,7 +78,8 @@ def generate_slurm_executable(interpreter, run_folder_name, target_file_path, ar
     echo "host: $(hostname)" &>> $log
     echo "{target_file_path} {args}" &>> $log
     echo "" &>> $log
-    (time {interpreter} {target_file_path} {args}) &>> $log && echo {chr(4)} &>> $log
+    #(time {interpreter} {target_file_path} {args}) &>> $log && echo {chr(4)} &>> $log without tee for unbuffered output
+    bash -c "time {interpreter} {interpreter_args} {target_file_path} {args} 2>&1 | tee -a /dev/null" &>> $log
     '''
     return code, args
 
