@@ -84,7 +84,7 @@ def get_file_name(folder_name):
         return folder_name[i:]
 
 def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, interpreter_args=""):
-    assert pargs.i is not None
+    assert pargs.name is not None, "The container_name -i must be specified."
 
     #Syncs folders
     machine.sync_files()
@@ -125,7 +125,7 @@ def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, m
     mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=False)
 
 def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, interpreter_args=""):
-    assert pargs.i is not None
+    assert pargs.name is not None, "The container_name -i must be specified."
 
     #Syncs folders
     machine.sync_files()
@@ -165,7 +165,7 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path,
     
 
 def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
-    assert pargs.i is not None
+    assert pargs.name is not None, "The container_name -i must be specified."
     
     saved_settings = {}
     # Add pargs.args to the saved_settings
@@ -210,9 +210,9 @@ def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path,
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
     # Record active process
-    record_process(pargs.vm, pargs.target, pargs.i)
+    record_process(pargs.vm, pargs.target, pargs.name)
     tail_pull(machine, run_folder_name, pid)
-    remove_process_from_database(pargs.target, pargs.i)
+    remove_process_from_database(pargs.target, pargs.name)
 
 
 
@@ -221,11 +221,10 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument("mode")
+    parser.add_argument("mode", help="The mode of the program. Either run, rerun or kill.")
 
-    parser.add_argument("target")
-    parser.add_argument("-i", "--name", dest="i", help="Container name.", default=None)
-    parser.add_argument("-ic", "--namec", dest="ic", help="Container name to copy to.", default=None)
+    parser.add_argument("target", help="Name of the file to run.")
+    parser.add_argument("-n", "--name", dest="name", help="Container name.", default=None)
     parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default="")
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
     parser.add_argument("-f", "--file", dest="file", help="In case it is run on a folder this specifies the file that should be run.", default="run.py")
@@ -277,7 +276,7 @@ if __name__ == "__main__":
             source_file_path = source_file_path[:-1]
         folder_name = extract_folder_name(source_file_path)
 
-        run_folder_name = f"0encap_folder/{folder_name}/{pargs.i}/"
+        run_folder_name = f"0encap_folder/{folder_name}/{pargs.name}/"
         target_file_path = run_folder_name + pargs.file # Note that pargs.file = "run.py" by default
         
         _, file_extension = filename_and_file_extension(target_file_path)
@@ -292,7 +291,7 @@ if __name__ == "__main__":
         # Get the file name
         file_name = get_file_name(source_file_path)
 
-        run_folder_name = folder_name + "/" + str(pargs.i)
+        run_folder_name = folder_name + "/" + str(pargs.name)
         target_file_path = run_folder_name + "/" + file_name
         is_file = True
 
@@ -328,7 +327,7 @@ if __name__ == "__main__":
             machine.pull(run_folder_name, run_folder_name, directory=True)
 
             tail_pull(machine, run_folder_name, pid)
-            remove_process_from_database(pargs.target, pargs.i)
+            remove_process_from_database(pargs.target, pargs.name)
 
         elif  out[0][:4] == "cat:":
                 machine.pull(run_folder_name, run_folder_name, directory=True)
@@ -393,7 +392,7 @@ if __name__ == "__main__":
         print("Currently killing is not supported.")
 
     elif pargs.mode == "queue":
-        localmachine.push(source_file_path, folder_name + "/" + pargs.i +"/" + file_name, directory=False, verbose=True)
+        localmachine.push(source_file_path, folder_name + "/" + pargs.name +"/" + file_name, directory=False, verbose=True)
         localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
 
         if pargs.vm is None:
@@ -402,17 +401,17 @@ if __name__ == "__main__":
         cd ~/.encap
         mkdir -p queue
         cd queue
-        echo "encap rerun {pargs.target} -i {pargs.i} -vm {pargs.vm} -args '{pargs.args}'" &>> {pargs.vm}
+        echo "encap rerun {pargs.target} -i {pargs.name} -vm {pargs.vm} -args '{pargs.args}'" &>> {pargs.vm}
 
         if [[ -a {pargs.vm}_pending ]]
         then
-            echo "encap rerun {pargs.target} -i {pargs.i} -vm {pargs.vm} -y -args '{pargs.args}'" &>> {pargs.vm}_pending
+            echo "encap rerun {pargs.target} -i {pargs.name} -vm {pargs.vm} -y -args '{pargs.args}'" &>> {pargs.vm}_pending
         fi
         """
         localmachine.run_code(code)
 
     elif pargs.mode == "runqueue":
-        assert pargs.i is not None
+        assert pargs.name is not None, "The container_name -i must be specified."
 
         if pargs.vm is None:
             assert False
@@ -435,29 +434,29 @@ if __name__ == "__main__":
         machine.run_code(code, output=True, verbose=True)
 
     elif pargs.mode == "pull":
-        assert pargs.i is not None
+        assert pargs.name is not None, "The container_name -i must be specified."
         machine.pull(run_folder_name, run_folder_name, directory=True, verbose=True)
 
     elif pargs.mode == "push":
-        assert pargs.i is not None
+        assert pargs.name is not None, "The container_name -i must be specified."
         machine.push(run_folder_name, run_folder_name, directory=True, verbose=True)
 
     elif pargs.mode == "loadsave":
-        assert pargs.i is not None
+        assert pargs.name is not None, "The container_name -i must be specified."
         localmachine.push(source_file_path, folder_name + "/save/" + file_name, directory=False, verbose=True)
         localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "save":
-        assert pargs.i is not None
-        localmachine.push(source_file_path, folder_name + "/" + pargs.i +"/" + file_name, directory=False, verbose=True)
+        assert pargs.name is not None, "The container_name -i must be specified."
+        localmachine.push(source_file_path, folder_name + "/" + pargs.name +"/" + file_name, directory=False, verbose=True)
         localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "load":
-        assert pargs.i is not None
+        assert pargs.name is not None, "The container_name -i must be specified."
         localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "reload":
-        assert pargs.i is not None
+        assert pargs.name is not None, "The container_name -i must be specified."
         localmachine.push(folder_name + "/save/" + file_name, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "pkill":

@@ -12,7 +12,7 @@ python scripts/my_script.py
 ```
 with encap you would write:
 ```
-encap run scripts/my_script.py -i <version_name>
+encap run scripts/my_script.py -n <version_name>
 ```
 this will create a folder scripts/my_script/<version_name> and copy the script inside.
 Then the script will be executed with
@@ -37,21 +37,21 @@ pickle.dump(["Some", "test", "data"], open(save_name, "wb"))
 ```
 Running:
 ```
-encap run scripts/my_script.py -i 1
+encap run scripts/my_script.py -n test
 ```
 
 gives the output:
 ```
 PID 23968
 Sat Sep 14 01:03:28 CEST 2019
-scripts/1/my_script.py   
+scripts/test/my_script.py   
 
-my_script/1/test_data.p
+my_script/test/test_data.p
 ```
 and generates three files:
-* my_script/1/log
-* my_script/1/my_script.py
-* my_script/1/test_data.p
+* my_script/test/log
+* my_script/test/my_script.py
+* my_script/test/test_data.p
 
 ## Installation
 ```bash
@@ -62,7 +62,7 @@ pip install git+https://github.com/danielalcalde/encap
 The script can be also executed on a remote server through ssh.
 
 ```bash
-encap run scripts/my_script.py -i 1 -vm <machine name>
+encap run scripts/my_script.py -name <version_name> -vm <machine name>
 ```
 The configuration file is located at ~/.encap/config.yml:
 ```yml
@@ -88,7 +88,7 @@ Alternatievly the config file can also be saved in the same folder as the encap 
 ## Slurm
 Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as the -i argument.
 ```
-encap run slurm_test.py -i test -sln 3 -args " -i \$SLURM_PROCID"
+encap run slurm_test.py -n test -sln 3 -args " -i \$SLURM_PROCID"
 ```
 
 Example config file that will restart the slurm job if it did not exit sucessfully.
