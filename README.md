@@ -79,7 +79,7 @@ slurm:
     - fi
 ```
 
-{run.sh} and {run.slurm} will be replaced with the actual script and slurm file upon execution.
+{run.sh} and {run.slurm} will be replaced with the actual script and slurm file automatically upon execution.
 
 
 ## Configuring ssh
