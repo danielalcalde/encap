@@ -41,13 +41,16 @@ def run(machine, interpreter, target, args, run_folder_name, target_file_path, i
     print('PID ' + pid)
     return pid
 
-def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings, interpreter_args=""):
+def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings, interpreter_args="", name=None):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
     # Delete previous log file and create a new one
     machine.run_code(f"""rm {run_folder_name}/pid -f
-    rm {run_folder_name}/log* -f
-    touch {run_folder_name}/log""")
+    rm {run_folder_name}/slurm_files/log* -f
+    touch {run_folder_name}/log
+    mkdir -p {run_folder_name}/slurm_files
+    """)
+
 
     # Create the slurm script for all slurm instances
     for i in slurm_settings["i"]:
@@ -56,9 +59,9 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_p
         else:
             slurm_instance_text = f"_{i}"
         
-        runslurm_file_name = f"{run_folder_name}/run{slurm_instance_text}.slurm"
-        executable_file_name = f"{run_folder_name}/run{slurm_instance_text}.sh"
-        log_file_name = f"{run_folder_name}/log{slurm_instance_text}.slurm"
+        runslurm_file_name = f"{run_folder_name}/slurm_files/run{slurm_instance_text}.slurm"
+        executable_file_name = f"{run_folder_name}/slurm_files/run{slurm_instance_text}.sh"
+        log_file_name = f"{run_folder_name}/slurm_files/log{slurm_instance_text}.slurm"
 
         # Script to run the file and save outputs in log
         code, args_replace = slurm.generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, slurm_instance=i)
@@ -67,7 +70,11 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_p
         machine.write_file(executable_file_name, code, verbose=True)
 
         # Generate the slurm settings script
-        code = slurm.generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name, executable_file_name, log_file_name, args_replace)
+        args_ = args_replace.replace(" ", "_")
+        if args_[0] == "_":
+            args_ = args_[1:]
+        job_name = f"{target}/{name}_{args_}"
+        code = slurm.generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name, executable_file_name, log_file_name, job_name=job_name)
 
         # Write the slurm file
         machine.write_file(runslurm_file_name, code, verbose=True)
@@ -205,7 +212,7 @@ def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path,
             yaml.dump(saved_settings, ymlfile, default_flow_style=False)
         
         # Run the SLURM job with the slurm config file
-        run_slurm(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path, slurm_settings)
+        run_slurm(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path, slurm_settings, name=pargs.name)
 
     machine.pull(run_folder_name, run_folder_name, directory=True)
 

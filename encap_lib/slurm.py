@@ -2,7 +2,9 @@ import encap_lib.encap_settings as settings
 import yaml
 import sys
 
-def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=None, executable_file_name=None, log_file_name=None, args=None):
+def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=None,
+                          executable_file_name=None, log_file_name=None, 
+                          job_name=None, interpreter=None, interpreter_args=None):
     """ Generate slurm script for a given settings.
     args: run_folder_name, slurm_settings
     return: slurm script string
@@ -16,15 +18,12 @@ def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=No
     if log_file_name is None:
         log_file_name = f"{run_folder_name}/log.slurm"
     
-    if args is None:
-        args = ""
-    else:
-        args = "_" + args.replace(" ", "_")
-    
+    if job_name is None:
+        job_name = f"{run_folder_name}"
     
     # Generate the slurm file
     code = f"""#!/bin/bash
-#SBATCH --job-name={run_folder_name}{args}
+#SBATCH --job-name={job_name}
 #SBATCH --output={log_file_name}
 #SBATCH --error={log_file_name}\n"""
     exceptions = ["code", "i"]
@@ -44,9 +43,8 @@ def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=No
         if isinstance(c, list):
             c = "\n".join(c) 
 
-
         c = c.replace("{run_folder_name}", run_folder_name)
-        c = c.replace("{i}", f"{slurm_settings.get('i')}")
+        c = c.replace("{i}", f"{slurm_settings.get('i')}") #TODO: Not sure if this is correct
         c = c.replace("{run.slurm}", runslurm_file_name)
         c = c.replace("{run.sh}", executable_file_name)
         code += c
