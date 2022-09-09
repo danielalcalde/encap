@@ -4,6 +4,7 @@ This program is intended to be used for scientific computing, it is possible to 
 
 It currently has support for:
 * Running experiments locally/remotely thourgh ssh
+* Starting several experiments in parallel
 * Running experiments through SLURM
 
 If one want to execute a script instead of writing:
@@ -17,7 +18,7 @@ encap run scripts/my_script.py -n <version_name>
 this will create a folder scripts/my_script/<version_name> and copy the script inside.
 Then the script will be executed with
 ```
-nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
+ssid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
 ```
 The log file will be tailed afterwards. This makes it easy to keep track of different computational experiments. In python an example could be the following:
 
@@ -52,7 +53,34 @@ and generates three files:
 ```bash
 pip install git+https://github.com/danielalcalde/encap
 ```
-## Examples
+## Starting several experiments in parallel
+#### my_script.py
+```python
+import pickle
+import os
+
+i = os.environ["ENCAP_INSTANCE"]
+save_name = f"test_data_{i}.p"
+print(save_name)
+print("This is the", i, "encap instance")
+
+pickle.dump(["Some", "test", "data", i], open(save_name, "wb"))
+```
+
+```bash
+encap run scripts/my_script.py -i 3 -n test
+```
+will run the script three times in parallel. It will create the files:
+* my_script/test/my_script.py
+* my_script/test/log
+* my_script/test/log_1
+* my_script/test/log_2
+* my_script/test/test_data_0.p
+* my_script/test/test_data_1.p
+* my_script/test/test_data_2.p
+
+
+## More Examples
 Several examples can be found in the examples folder.
 
 ## Slurm
@@ -80,7 +108,7 @@ slurm:
 {run.sh} and {run.slurm} will be replaced with the actual script and slurm file automatically upon execution.
 
 
-## Configuring ssh
+## Configuring SSH (untested with newest features)
 The script can be also executed on a remote server through ssh. For this a mirror of the local folder is created on the remote server.
 
 ```bash
