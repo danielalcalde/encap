@@ -24,16 +24,18 @@ done < <(tail -f {run_folder_name}/log)
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
 # Bash code to run the file and save outputs in log, save PID in the file pid.
-def run(machine, interpreter, target, args, run_folder_name, target_file_path, interprter_args=""):
+def run(machine, interpreter, args, run_folder_name, target_file, target_file_path, interprter_args=""):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
-    log = f"{run_folder_name}/log"
+    
     code = f'''
-    date &> {log}
-    echo "host: $(hostname)" &>> {log}
-    echo "{target_file_path} {args}  \n" &>> {log}
+    cd {run_folder_name}
+    date &> log
+    echo "host: $(hostname)" &>> log
+    echo "{target_file_path} {args}  \n" &>> log
     # Tee avoids buffering
-    nohup bash -c "time {interpreter} {interprter_args} {target_file_path} {args} 2>&1 | tee -a /dev/null" &>> {log} & disown
+    setsid nohup bash -c "time {interpreter} {interprter_args} {target_file} {args} 2>&1 | tee -a /dev/null" &>> log &!
     PID=$!
+    echo $PID
     echo "$PID"
     echo "$PID" > {run_folder_name}/pid
     '''
@@ -90,7 +92,7 @@ def get_file_name(folder_name):
         i = len(folder_name) - i
         return folder_name[i:]
 
-def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, interpreter_args=""):
+def mode_run_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -i must be specified."
 
     #Syncs folders
@@ -129,9 +131,9 @@ def mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, m
     machine.push(source_file_path, target_file_path, directory=False, verbose=True)
 
     # Run the file and save outputs in log, save PID in the file pid.
-    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=False)
+    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, rerun=False)
 
-def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, interpreter_args=""):
+def mode_run_folder(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -i must be specified."
 
     #Syncs folders
@@ -167,11 +169,12 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path,
 
     # Copy the local version of pargs.target to the run_folder
     machine.push(source_file_path, run_folder_name, directory=True, copy_full_dir=False, verbose=True)
-    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=False)
+    
+    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, rerun=False)
     # Run the file and save outputs in log, save PID in the file pid.
     
 
-def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
+def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
     assert pargs.name is not None, "The container_name -i must be specified."
     
     saved_settings = {}
@@ -195,7 +198,7 @@ def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path,
 
     # Are we using slurm?
     if slurm_settings is None:
-        pid = run(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path)
+        pid = run(machine, interpreter, pargs.args, run_folder_name, target_file, target_file_path)
     else:
 
         # Read the slurm config file in the run folder if it exsists and it is a rerun
@@ -284,8 +287,9 @@ if __name__ == "__main__":
         folder_name = extract_folder_name(source_file_path)
 
         run_folder_name = f"0encap_folder/{folder_name}/{pargs.name}/"
+        target_file = pargs.file
         target_file_path = run_folder_name + pargs.file # Note that pargs.file = "run.py" by default
-        
+
         _, file_extension = filename_and_file_extension(target_file_path)
         interpreter = get_interpreter_from_file_extension(file_extension)
 
@@ -299,6 +303,7 @@ if __name__ == "__main__":
         file_name = get_file_name(source_file_path)
 
         run_folder_name = folder_name + "/" + str(pargs.name)
+        target_file = file_name
         target_file_path = run_folder_name + "/" + file_name
         is_file = True
 
@@ -313,12 +318,12 @@ if __name__ == "__main__":
 
     if pargs.mode == "run":
         if is_file:
-            mode_run_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs)
+            mode_run_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs)
         else:
-            mode_run_folder(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs)
+            mode_run_folder(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs)
         
     elif pargs.mode == "rerun":
-        mode_rerun_file(interpreter, folder_name, run_folder_name, target_file_path, machine, pargs)
+        mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs)
         
         
     elif pargs.mode == "tail":
