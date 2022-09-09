@@ -23,14 +23,9 @@ The log file will be tailed afterwards. This makes it easy to keep track of diff
 
 #### my_script.py
 ```python
-import os, pickle
+import pickle
 
-def get_loc():
-    absolute_path = os.path.dirname(os.path.realpath(__file__))
-    relative_path = os.path.relpath(absolute_path, os.getcwd())
-    return relative_path
-
-save_name = get_loc() + "/test_data.p"
+save_name = "test_data.p"
 print(save_name)
 
 pickle.dump(["Some", "test", "data"], open(save_name, "wb"))
@@ -46,7 +41,7 @@ PID 23968
 Sat Sep 14 01:03:28 CEST 2019
 scripts/test/my_script.py   
 
-my_script/test/test_data.p
+test_data.p
 ```
 and generates three files:
 * my_script/test/log
