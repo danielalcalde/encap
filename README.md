@@ -52,6 +52,9 @@ and generates three files:
 ```bash
 pip install git+https://github.com/danielalcalde/encap
 ```
+## Examples
+Several examples can be found in the examples folder.
+
 ## Slurm
 Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as the -i argument.
 ```

@@ -24,23 +24,48 @@ done < <(tail -f {run_folder_name}/log)
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
 # Bash code to run the file and save outputs in log, save PID in the file pid.
-def run(machine, interpreter, args, run_folder_name, target_file, target_file_path, interprter_args=""):
+def run(machine, interpreter, args, run_folder_name, target_file, target_file_path, interprter_args="", number_of_instances=1):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
     
-    code = f'''
-    cd {run_folder_name}
-    date &> log
-    echo "host: $(hostname)" &>> log
-    echo "{target_file_path} {args}  \n" &>> log
-    # Tee avoids buffering
-    setsid nohup bash -c "time {interpreter} {interprter_args} {target_file} {args} 2>&1 | tee -a /dev/null" &>> log &!
-    PID=$!
-    echo $PID
-    echo "$PID"
-    echo "$PID" > {run_folder_name}/pid
-    '''
-    pid = machine.run_code(code, output=True)[0]
-    print('PID ' + pid)
+
+    if isinstance(number_of_instances, int):
+        iterator = range(number_of_instances)
+    else:
+        iterator = number_of_instances
+
+    for i in iterator:
+
+        if i == 0:
+            log = "log"
+        else:
+            log = f"log_{i}"
+        
+        print_instance = ""
+        if len(iterator) > 1:
+            print_instance = f"echo 'Instance {i}' &>> {log}"
+        
+        code = f'''
+        cd {run_folder_name}
+        export ENCAP_INSTANCE={i}
+        date &> {log}
+        echo "host: $(hostname)" &>> {log}
+        {print_instance}
+        echo "{target_file_path} {args}  \n" &>> {log}
+        # Tee avoids buffering
+        setsid nohup bash -c "time {interpreter} {interprter_args} {target_file} {args} 2>&1 | tee -a /dev/null" &>> {log} &!
+        '''
+
+        if i == 0:
+            code += f"""
+        PID=$!
+        echo $PID 
+        echo "$PID" > pid"""
+            out = machine.run_code(code, output=True)
+            pid = out[0]
+            print('PID ' + pid)
+        else:
+            machine.run_code(code, wait=False)
+
     return pid
 
 def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings, interpreter_args="", name=None):
@@ -93,7 +118,7 @@ def get_file_name(folder_name):
         return folder_name[i:]
 
 def mode_run_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, interpreter_args=""):
-    assert pargs.name is not None, "The container_name -i must be specified."
+    assert pargs.name is not None, "The container_name -n must be specified."
 
     #Syncs folders
     machine.sync_files()
@@ -134,7 +159,7 @@ def mode_run_file(interpreter, folder_name, run_folder_name, target_file, target
     mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, rerun=False)
 
 def mode_run_folder(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, interpreter_args=""):
-    assert pargs.name is not None, "The container_name -i must be specified."
+    assert pargs.name is not None, "The container_name -n must be specified."
 
     #Syncs folders
     machine.sync_files()
@@ -175,7 +200,7 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, target_file, targ
     
 
 def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
-    assert pargs.name is not None, "The container_name -i must be specified."
+    assert pargs.name is not None, "The container_name -n must be specified."
     
     saved_settings = {}
     # Add pargs.args to the saved_settings
@@ -198,7 +223,7 @@ def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, targ
 
     # Are we using slurm?
     if slurm_settings is None:
-        pid = run(machine, interpreter, pargs.args, run_folder_name, target_file, target_file_path)
+        pid = run(machine, interpreter, pargs.args, run_folder_name, target_file, target_file_path, number_of_instances=pargs.i)
     else:
 
         # Read the slurm config file in the run folder if it exsists and it is a rerun
@@ -238,6 +263,7 @@ if __name__ == "__main__":
     parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default="")
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
     parser.add_argument("-f", "--file", dest="file", help="In case it is run on a folder this specifies the file that should be run.", default="run.py")
+    parser.add_argument("-i", "--number_of_instances", dest="i", help="Number of instances to start in parallel. For each instance an enviromental variable ENCAP_INSTANCE=<instance_number> will be set. You can also pass a list or any python expression as a string. Currently not compatible with slurm.", default=1, type=eval)
 
     # Slurm arguments
     parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Run the job on slurm. If any slurm option is used this is True by default.", default=False)
@@ -413,17 +439,17 @@ if __name__ == "__main__":
         cd ~/.encap
         mkdir -p queue
         cd queue
-        echo "encap rerun {pargs.target} -i {pargs.name} -vm {pargs.vm} -args '{pargs.args}'" &>> {pargs.vm}
+        echo "encap rerun {pargs.target} -n {pargs.name} -vm {pargs.vm} -args '{pargs.args}'" &>> {pargs.vm}
 
         if [[ -a {pargs.vm}_pending ]]
         then
-            echo "encap rerun {pargs.target} -i {pargs.name} -vm {pargs.vm} -y -args '{pargs.args}'" &>> {pargs.vm}_pending
+            echo "encap rerun {pargs.target} -n {pargs.name} -vm {pargs.vm} -y -args '{pargs.args}'" &>> {pargs.vm}_pending
         fi
         """
         localmachine.run_code(code)
 
     elif pargs.mode == "runqueue":
-        assert pargs.name is not None, "The container_name -i must be specified."
+        assert pargs.name is not None, "The container_name -n must be specified."
 
         if pargs.vm is None:
             assert False
@@ -446,29 +472,29 @@ if __name__ == "__main__":
         machine.run_code(code, output=True, verbose=True)
 
     elif pargs.mode == "pull":
-        assert pargs.name is not None, "The container_name -i must be specified."
+        assert pargs.name is not None, "The container_name -n must be specified."
         machine.pull(run_folder_name, run_folder_name, directory=True, verbose=True)
 
     elif pargs.mode == "push":
-        assert pargs.name is not None, "The container_name -i must be specified."
+        assert pargs.name is not None, "The container_name -n must be specified."
         machine.push(run_folder_name, run_folder_name, directory=True, verbose=True)
 
     elif pargs.mode == "loadsave":
-        assert pargs.name is not None, "The container_name -i must be specified."
+        assert pargs.name is not None, "The container_name -n must be specified."
         localmachine.push(source_file_path, folder_name + "/save/" + file_name, directory=False, verbose=True)
         localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "save":
-        assert pargs.name is not None, "The container_name -i must be specified."
+        assert pargs.name is not None, "The container_name -n must be specified."
         localmachine.push(source_file_path, folder_name + "/" + pargs.name +"/" + file_name, directory=False, verbose=True)
         localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "load":
-        assert pargs.name is not None, "The container_name -i must be specified."
+        assert pargs.name is not None, "The container_name -n must be specified."
         localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "reload":
-        assert pargs.name is not None, "The container_name -i must be specified."
+        assert pargs.name is not None, "The container_name -n must be specified."
         localmachine.push(folder_name + "/save/" + file_name, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "pkill":
