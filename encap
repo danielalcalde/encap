@@ -45,6 +45,8 @@ def run(machine, interpreter, args, run_folder_name, target_file, target_file_pa
             print_instance = f"echo 'Instance {i}' &>> {log}"
         
         code = f'''
+        set -e # Exit on error
+        
         cd {run_folder_name}
         export ENCAP_INSTANCE={i}
         date &> {log}
