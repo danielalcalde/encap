@@ -63,6 +63,7 @@ def generate_slurm_executable(interpreter, run_folder_name, target_file_path, ar
 
         
     code = f'''#!/bin/bash
+    ENCAP_SLURM_INSTANCE={slurm_instance}
     # If $SLURM_PROCID is 0, then the log file is called log
     if [ "$SLURM_PROCID" == "0" ]
     then
