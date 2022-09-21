@@ -5,9 +5,9 @@ import os
 import time
 
 time.sleep(2)
-
-save_name = "test_data.p"
+i = os.environ["ENCAP_INSTANCE"]
+save_name = f"test_data_{i}.p"
 print(save_name)
-print("This is the", os.environ["ENCAP_INSTANCE"], "encap instance")
+print("This is the", i, "encap instance")
 
 pickle.dump(["Some", "test", "data"], open(save_name, "wb"))
