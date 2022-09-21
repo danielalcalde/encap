@@ -33,6 +33,7 @@ def run(machine, interpreter, args, run_folder_name, target_file, target_file_pa
     else:
         iterator = number_of_instances
 
+    pids = []
     for i in iterator:
 
         if i == 0:
@@ -55,20 +56,22 @@ def run(machine, interpreter, args, run_folder_name, target_file, target_file_pa
         echo "{target_file_path} {args}  \n" &>> {log}
         # Tee avoids buffering
         setsid nohup bash -c "time {interpreter} {interprter_args} {target_file} {args} 2>&1 | tee -a /dev/null" &>> {log} &!
+        PID=$!
+        echo $PID 
         '''
 
         if i == 0:
             code += f"""
-        PID=$!
-        echo $PID 
+        
         echo "$PID" > pid"""
-            out = machine.run_code(code, output=True)
-            pid = out[0]
+            pid = machine.run_code(code, output=True)[0]
             print('PID ' + pid)
         else:
-            machine.run_code(code, wait=False)
+            pid = machine.run_code(code, output=True)[0]
+        
+        pids.append(pid)
 
-    return pid
+    return pids[0]
 
 def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings, interpreter_args="", name=None):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
