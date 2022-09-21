@@ -5,7 +5,7 @@ import os
 import time
 
 time.sleep(2)
-i = os.environ["ENCAP_INSTANCE"]
+i = os.environ["ENCAP_PROCID"]
 save_name = f"test_data_{i}.p"
 print(save_name)
 print("This is the", i, "encap instance")

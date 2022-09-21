@@ -54,36 +54,35 @@ def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=No
 def generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, target_file, slurm_instance=0, ntpn=1, interpreter_args=""):
     """ Generate slurm executable.
     """
-    if slurm_instance == 0 and ntpn == 1:
-        slurm_instance_text = ""
-    else:
-        slurm_instance_text = f"_{slurm_instance}"
 
     args = args.replace("{i}", f"{slurm_instance}")
-
         
     code = f'''#!/bin/bash
     export ENCAP_SLURM_INSTANCE={slurm_instance}
+    export ENCAP_PROCID=$(({slurm_instance * ntpn} + $SLURM_PROCID))
     cd {run_folder_name}
     
-    # If $SLURM_PROCID is 0, then the log file is called log_SLURM_PROCID
-    if [ "$SLURM_PROCID" == "0" ]
-    then
-        log="log{slurm_instance_text}"
-    else
-        log="log{slurm_instance_text}_$SLURM_PROCID"
-    fi
-
-    # If $SLURM_PROCID is 0 and SLURM_PROCID is 0, then the log file is called log
-    if [ "$SLURM_PROCID" == "0" ] && [ "{slurm_instance}" == "0" ]
+    # If $ENCAP_PROCID is 0, then the log file is called log
+    if [ "$ENCAP_PROCID" == "0" ]
     then
         log="log"
+    else
+        log="log_$ENCAP_PROCID"
     fi
 
     echo $log
     echo "Slurm Job Id: $SLURM_JOB_ID" &> $log
     date &>> $log
     echo "host: $(hostname)" &>> $log
+    echo "Slurm Instance: {slurm_instance}" &>> $log
+
+    if [ "{ntpn}" != "1" ]
+    then
+        echo "Slurm Proc Id: $SLURM_PROCID" &>> $log
+    fi
+    echo "Encap Proc Id: $ENCAP_PROCID" &>> $log
+
+
     echo "{target_file_path} {args}" &>> $log
     echo "" &>> $log
     #(time {interpreter} {target_file} {args}) &>> $log && echo {chr(4)} &>> $log without tee for unbuffered output

@@ -59,7 +59,7 @@ pip install git+https://github.com/danielalcalde/encap
 import pickle
 import os
 
-i = os.environ["ENCAP_INSTANCE"]
+i = os.environ["ENCAP_PROCID"]
 save_name = f"test_data_{i}.p"
 print(save_name)
 print("This is the", i, "encap instance")
@@ -86,7 +86,7 @@ Several examples can be found in the examples folder.
 ## Slurm
 Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as the -i argument.
 ```
-encap run slurm_test.py -n test -sln 3 -args " -i \$SLURM_PROCID"
+encap run slurm_test.py -n test -sl_nodes 3 -args " -i \$ENCAP_PROCID"
 ```
 The configuration file is located at ~/.encap/config.yml.
 
@@ -106,6 +106,9 @@ slurm:
 ```
 
 {run.sh} and {run.slurm} will be replaced with the actual script and slurm file automatically upon execution.
+
+If you want to execute different slurm instances in parallel you can use the -sl_i argument.
+```
 
 
 ## Configuring SSH (untested with newest features)

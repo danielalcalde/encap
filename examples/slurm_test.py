@@ -5,11 +5,12 @@ import os
 import time
 
 time.sleep(2)
-i = os.environ["ENCAP_SLURM_INSTANCE"] # [0,..., 5]
-j = os.environ["SLURM_PROCID"] # [0,1]
+i = os.environ["ENCAP_PROCID"]
+i2 = os.environ["ENCAP_SLURM_INSTANCE"] # [0,..., 5]
+i3 = os.environ["SLURM_PROCID"] # [0,1]
 
-save_name = f"test_data_{i}_{j}.p"
+save_name = f"test_data_{i}.p"
 print(save_name)
-print(f"This is the {j} task on the {i} SLURM_INSTANCE")
+print(f"This is the {i3} task on the {i2} SLURM_INSTANCE")
 
 pickle.dump(["Some", "test", "data"], open(save_name, "wb"))
