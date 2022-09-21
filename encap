@@ -96,7 +96,7 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_p
         log_file_name = f"{run_folder_name}/slurm_files/log{slurm_instance_text}.slurm"
 
         # Script to run the file and save outputs in log
-        code, args_replace = slurm.generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, slurm_instance=i)
+        code, args_replace = slurm.generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, slurm_instance=i, target_file=target_file, ntpn=slurm_settings["ntasks-per-node"])
 
         # Save the script in the run_folder
         machine.write_file(executable_file_name, code, verbose=True)
@@ -274,7 +274,7 @@ if __name__ == "__main__":
     # Slurm arguments
     parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Run the job on slurm. If any slurm option is used this is True by default.", default=False)
     parser.add_argument("-sl_nodes", "--slurm_nodes", dest="sl_nodes", help="Number of nodes to start in slurm. - nodes", default=None, type=int)
-    parser.add_argument("-sl_ntpn", "--slurm_ntpn", dest="sl_ntpn", help="Number of tasks per node to start in slurm. - ntasks-per-node", default=None, type=int)
+    parser.add_argument("-sl_ntpn", "--slurm_ntasks-per-node", dest="sl_ntpn", help="Number of tasks per node to start in slurm. - ntasks-per-node", default=None, type=int)
     parser.add_argument("-sl_time", "--slurm_time", dest="sl_time", help="Time to run the job in slurm. - time", default=None)
     parser.add_argument("-sl_partition", "--slurm_partition", dest="sl_partition", help="Partition to run the job in slurm.", default=None)
     parser.add_argument("-sl_account", "--slurm_account", dest="sl_account", help="Account to run the job in slurm.", default=None)
