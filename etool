@@ -22,8 +22,42 @@ pargs = parser.parse_args()
 
 import time, timeit
 import os
+from concurrent.futures import ThreadPoolExecutor
+
 import encap_lib.encap_settings as settings
 from encap_lib.encap_lib import SSHMachine, GCMachine, LocalMachine, get_machine
+from encap_lib import fabric_wrapper
+
+
+def extract_hosts(a):
+    """
+    input "er{00-05}c"
+    ouput ['er00c', 'er01c', 'er02c', 'er03c', 'er04c', 'er05c']
+    """
+    head, mid = a.split("{")
+    mid, back = mid.split("}")
+
+    n1, n2 = mid.split("-")
+    # Count leading zeros
+    for l, ni in enumerate(n1):
+        if ni != "0":
+            break
+
+    # Construct hosts
+    # zfill: will fill with the begining of the sring with zeros
+    return [head + str(i).zfill(l+1) + back for i in range(int(n1), int(n2)+1)]
+
+def get_status(vms):
+    
+    # machines = [fabric_wrapper.SSHMachine(vm) for vm in vms]
+    pool = ThreadPoolExecutor(9)
+    machines = pool.map(fabric_wrapper.SSHMachine, vms)
+    
+    code =""" python -c "import psutil; print(max(psutil.cpu_percent(interval=10, percpu=True)))" """
+    procs = [machine.run_code(code, wait=False) for machine in machines]
+    
+    return [fabric_wrapper.follow_output(proc, verbose=False)[0] for proc in procs]
+
 
 if pargs.debug:
     settings.debug = True
@@ -32,6 +66,16 @@ local_project_dir = os.getcwd()
 
 #Begining of code
 localmachine = LocalMachine(local_project_dir)
+
+if pargs.mode == "status":
+    if "-" in pargs.vm and "{" in pargs.vm:
+        vms = extract_hosts(pargs.vm)
+        percents = get_status(vms)
+        for vm, percent in zip(vms, percents):
+            print(f"{vm}: {percent}")
+        
+    exit()
+
 machine = get_machine(pargs.vm, local_project_dir)
 
 if pargs.mode == "ssh":
@@ -70,9 +114,6 @@ elif pargs.mode == "timeit":
     #assert type(machine) == GCMachine
     f = lambda: machine.run_code("ls", verbose=False)
     print(timeit.timeit(f, number=10))
-
-elif pargs.mode == "status":
-    pass
 
 
 elif pargs.mode == "jupyter":
