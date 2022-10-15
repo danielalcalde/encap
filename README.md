@@ -108,8 +108,6 @@ slurm:
 {run.sh} and {run.slurm} will be replaced with the actual script and slurm file automatically upon execution.
 
 If you want to execute different slurm instances in parallel you can use the -sl_i argument.
-```
-
 
 ## Configuring SSH (untested with newest features)
 The script can be also executed on a remote server through ssh. For this a mirror of the local folder is created on the remote server.
