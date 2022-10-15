@@ -130,7 +130,7 @@ projects:
       user: <username>
       <machine name>:
         ip: <ip>
-
+```
 # SSH output to be ignored.
 ssh_ignore: ["X11 forwarding request failed on channel"]
 # Folders to be ignored wile rsyncing between local and remote machine
