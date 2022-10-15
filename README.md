@@ -18,7 +18,7 @@ encap run scripts/my_script.py -n <version_name>
 this will create a folder scripts/my_script/<version_name> and copy the script inside.
 Then the script will be executed with
 ```
-ssid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
+setsid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
 ```
 The log file will be tailed afterwards. This makes it easy to keep track of different computational experiments. In python an example could be the following:
 
