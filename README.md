@@ -18,7 +18,7 @@ encap run scripts/my_script.py -n <version_name>
 this will create a folder scripts/my_script/<version_name> and copy the script inside.
 Then the script will be executed with
 ```
-ssid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
+setsid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
 ```
 The log file will be tailed afterwards. This makes it easy to keep track of different computational experiments. In python an example could be the following:
 
@@ -108,8 +108,6 @@ slurm:
 {run.sh} and {run.slurm} will be replaced with the actual script and slurm file automatically upon execution.
 
 If you want to execute different slurm instances in parallel you can use the -sl_i argument.
-```
-
 
 ## Configuring SSH (untested with newest features)
 The script can be also executed on a remote server through ssh. For this a mirror of the local folder is created on the remote server.
@@ -130,7 +128,7 @@ projects:
       user: <username>
       <machine name>:
         ip: <ip>
-
+```
 # SSH output to be ignored.
 ssh_ignore: ["X11 forwarding request failed on channel"]
 # Folders to be ignored wile rsyncing between local and remote machine
