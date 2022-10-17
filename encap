@@ -104,12 +104,15 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_p
         # Define job name
         job_name = f"{target}/{name}{slurm_instance_text}"
 
+        # Add arguments to the slurm job name
+        if len(args_replace) > 0:
+            args_ = args_replace.replace(" ", "_")
+            if len(args_) != 0 and args_[0] == "_":
+                args_ = args_[1:]
+            
+            job_name = f"{job_name}_{args_}"
+        
         # Generate the slurm settings script
-        args_ = args_replace.replace(" ", "_")
-        if len(args_) != 0 and args_[0] == "_":
-            args_ = args_[1:]
-            job_name = f"{target}/{name}_{args_}"
-
         code = slurm.generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name, executable_file_name, log_file_name, job_name=job_name)
 
         # Write the slurm file
