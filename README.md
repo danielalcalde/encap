@@ -3,11 +3,11 @@ Encap is a simple tool to keep track of computational experiments.
 This program is intended to be used for scientific computing, it is possible to run different experiments in different containers and keep track of the results.
 
 It currently has support for:
-* Running experiments locally/remotely thourgh ssh
+* Running experiments locally/remotely through ssh
 * Starting several experiments in parallel
 * Running experiments through SLURM
 
-If one want to execute a script instead of writing:
+If one wants to execute a script instead of writing:
 ```bash
 python scripts/my_script.py
 ```
@@ -20,7 +20,7 @@ Then the script will be executed with
 ```
 setsid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
 ```
-The log file will be tailed afterwards. This makes it easy to keep track of different computational experiments. In python an example could be the following:
+The log file will be tailed afterward. This makes it easy to keep track of different computational experiments. In python an example could be the following:
 
 #### my_script.py
 ```python
@@ -90,15 +90,15 @@ will run the script three times in parallel. It will create the files:
 Several examples can be found in the examples folder.
 
 ## Slurm
-Example encap invocation that will execute slurm with 3 nodes and will pass the ENCAP_PROCID enviroment variable to the script as the -i argument.
+Example encap invocation that will execute slurm with 3 nodes and will pass the ENCAP_PROCID environment variable to the script as the -i argument.
 ```
 encap run slurm_test.py -n test -sl_nodes 3 -args " -i \$ENCAP_PROCID"
 ```
-Alternatievly the  ENCAP_PROCID can be directly read in your programm see /examples/test_script_instances.py
+Alternatively the  ENCAP_PROCID can be directly read in your program see /examples/test_script_instances.py
 
 The configuration file is located at ~/.encap/config.yml.
 
-Example config file that will restart the slurm job if it did not exit sucessfully:
+Example config file that will restart the slurm job if it did not exit successfully:
 ```yml
 slurm:
   account: <account>
@@ -118,7 +118,7 @@ slurm:
 If you want to execute different slurm instances in parallel you can use the -sl_i <n> argument. This will create n different slurm jobs.
 
 ## Configuring SSH (untested with newest features)
-The script can be also executed on a remote server through ssh. For this a mirror of the local folder is created on the remote server.
+The script can be also executed on a remote server through ssh. For this, a mirror of the local folder is created on the remote server.
 
 ```bash
 encap run scripts/my_script.py -name <version_name> -vm <machine name>
@@ -139,10 +139,10 @@ projects:
 ```
 # SSH output to be ignored.
 ssh_ignore: ["X11 forwarding request failed on channel"]
-# Folders to be ignored wile rsyncing between local and remote machine
+# Folders to be ignored while rsyncing between local and remote machine
 rsync_exclude: [".git", "*log*"]
 ```
-Alternatievly the config file can also be saved in the same folder as the encap script with the name .encap .
+Alternatively, the config file can also be saved in the same folder as the encap script with the name .encap .
 
 ## Configuring Google Cloud
 TODO
