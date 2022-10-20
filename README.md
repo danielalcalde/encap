@@ -53,6 +53,12 @@ and generates three files:
 ```bash
 pip install git+https://github.com/danielalcalde/encap
 ```
+
+## For help with all the options encap gives run
+```bash
+encap -h
+```
+
 ## Starting several experiments in parallel
 #### my_script.py
 ```python
