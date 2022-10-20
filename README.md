@@ -84,13 +84,15 @@ will run the script three times in parallel. It will create the files:
 Several examples can be found in the examples folder.
 
 ## Slurm
-Example encap invocation that will execute slurm with 3 nodes and will pass the PROC_ID enviroment variable to the script as the -i argument.
+Example encap invocation that will execute slurm with 3 nodes and will pass the ENCAP_PROCID enviroment variable to the script as the -i argument.
 ```
 encap run slurm_test.py -n test -sl_nodes 3 -args " -i \$ENCAP_PROCID"
 ```
+Alternatievly the  ENCAP_PROCID can be directly read in your programm see /examples/test_script_instances.py
+
 The configuration file is located at ~/.encap/config.yml.
 
-Example config file that will restart the slurm job if it did not exit sucessfully.
+Example config file that will restart the slurm job if it did not exit sucessfully:
 ```yml
 slurm:
   account: <account>
@@ -107,7 +109,7 @@ slurm:
 
 {run.sh} and {run.slurm} will be replaced with the actual script and slurm file automatically upon execution.
 
-If you want to execute different slurm instances in parallel you can use the -sl_i argument.
+If you want to execute different slurm instances in parallel you can use the -sl_i <n> argument. This will create n different slurm jobs.
 
 ## Configuring SSH (untested with newest features)
 The script can be also executed on a remote server through ssh. For this a mirror of the local folder is created on the remote server.
