@@ -73,7 +73,7 @@ def run(machine, interpreter, args, run_folder_name, target_file, target_file_pa
 
     return pids[0]
 
-def run_slurm(machine, interpreter, target, args, run_folder_name, target_file_path, slurm_settings, interpreter_args="", name=None):
+def run_slurm(machine, interpreter, target, args, run_folder_name, target_file, target_file_path, slurm_settings, interpreter_args="", name=None):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
     # Delete previous log file and create a new one
@@ -129,7 +129,7 @@ def get_file_name(folder_name):
         i = len(folder_name) - i
         return folder_name[i:]
 
-def mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, target_file, target_file_path, machine, pargs, interpreter_args=""):
+def mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
 
     #Syncs folders
@@ -168,9 +168,9 @@ def mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, t
     machine.push(source_file_path, target_file_path, directory=False, verbose=True)
 
     # Run the file and save outputs in log, save PID in the file pid.
-    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, rerun=False)
+    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, local_project_dir, target_file_path, machine, pargs, rerun=False)
 
-def mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path, target_file, target_file_path, machine, pargs, interpreter_args=""):
+def mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
 
     #Syncs folders
@@ -207,11 +207,11 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path,
     # Copy the local version of pargs.target to the run_folder
     machine.push(source_file_path, run_folder_name, directory=True, copy_full_dir=False, verbose=True)
     
-    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, rerun=False)
+    mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=False)
     # Run the file and save outputs in log, save PID in the file pid.
     
 
-def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
+def mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
     
     saved_settings = {}
@@ -253,7 +253,7 @@ def mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, targ
             yaml.dump(saved_settings, ymlfile, default_flow_style=False)
         
         # Run the SLURM job with the slurm config file
-        run_slurm(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file_path, slurm_settings, name=pargs.name)
+        run_slurm(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file, target_file_path, slurm_settings, name=pargs.name)
 
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
@@ -369,12 +369,12 @@ def main():
 
     if pargs.mode == "run":
         if is_file:
-            mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, target_file, target_file_path, machine, pargs)
+            mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs)
         else:
-            mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path, target_file, target_file_path, machine, pargs)
+            mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs)
         
     elif pargs.mode == "rerun":
-        mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, target_file_path, machine, pargs)
+        mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs)
         
         
     elif pargs.mode == "tail":
