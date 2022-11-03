@@ -1,5 +1,5 @@
-# Command to run six instances of the script on two nodes: 
-# encap run slurm_test.py -n test -sl_i 2 --slurm_ntasks-per-node 6
+# Command to run six instances of the script on two nodes, would make sense if the processor has 24 cores: 
+# encap run slurm_test.py -n test -sl_i 2 --slurm_ntasks-per-node 6 --slurm_cpus-per-task 4
 import pickle
 import os
 import time
