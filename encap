@@ -96,8 +96,7 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file, 
         log_file_name = f"{run_folder_name}/slurm_files/log{slurm_instance_text}.slurm"
 
         # Script to run the file and save outputs in log
-        code, args_replace = slurm.generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, slurm_instance=i, target_file=target_file, ntpn=slurm_settings["ntasks-per-node"])
-
+        code, args_replace = slurm.generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, target_file=target_file, slurm_instance=i, ntpn=slurm_settings["ntasks-per-node"])
         # Save the script in the run_folder
         machine.write_file(executable_file_name, code, verbose=True)
 
@@ -168,7 +167,7 @@ def mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, l
     machine.push(source_file_path, target_file_path, directory=False, verbose=True)
 
     # Run the file and save outputs in log, save PID in the file pid.
-    mode_rerun_file(interpreter, folder_name, run_folder_name, target_file, local_project_dir, target_file_path, machine, pargs, rerun=False)
+    mode_rerun_file(interpreter, folder_name=folder_name, run_folder_name=run_folder_name, target_file=target_file, local_project_dir=local_project_dir, target_file_path=target_file_path, machine=machine, pargs=pargs, rerun=False)
 
 def mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
@@ -213,9 +212,9 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path,
 
 def mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
-    
     saved_settings = {}
     # Add pargs.args to the saved_settings
+    print(target_file)
     if pargs.args != "":
         saved_settings["args"] = pargs.args
 
@@ -235,7 +234,7 @@ def mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir
 
     # Are we using slurm?
     if slurm_settings is None:
-        pid = run(machine, interpreter, pargs.args, run_folder_name, target_file, target_file_path, number_of_instances=pargs.i)
+        pid = run(machine, interpreter, pargs.args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, number_of_instances=pargs.i)
     else:
         assert pargs.i == 1, "The -i flag is not supported when using slurm."
 
@@ -253,7 +252,7 @@ def mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir
             yaml.dump(saved_settings, ymlfile, default_flow_style=False)
         
         # Run the SLURM job with the slurm config file
-        run_slurm(machine, interpreter, pargs.target, pargs.args, run_folder_name, target_file, target_file_path, slurm_settings, name=pargs.name)
+        run_slurm(machine, interpreter, pargs.target, pargs.args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, slurm_settings=slurm_settings, name=pargs.name)
 
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
