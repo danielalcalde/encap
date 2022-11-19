@@ -1,11 +1,11 @@
 # Encap (encapsulate)
 Encap is a simple tool to keep track of computational experiments.
-This program is intended to be used for scientific computing, it is possible to run different experiments in different containers and keep track of the results.
+This program is intended to be used for scientific computing, it makes it easier to run different experiments in different containers and keep track of results.
 
 It currently has support for:
-* Running experiments locally/remotely through ssh
 * Starting several experiments in parallel
-* Running experiments through SLURM
+* Running experiments on SLURM
+* Running experiments locally/remotely through ssh
 
 If one wants to execute a script instead of writing:
 ```bash
@@ -54,7 +54,7 @@ and generates three files:
 pip install git+https://github.com/danielalcalde/encap
 ```
 
-## For help with all the options encap gives run
+## For help with all the options:
 ```bash
 encap -h
 ```
@@ -90,16 +90,19 @@ will run the script three times in parallel. It will create the files:
 Several examples can be found in the examples folder.
 
 ## Configuring Slurm
-Example encap invocation that will execute slurm with 3 nodes and will pass the ENCAP_PROCID environment variable to the script as the -i argument.
+Example encap invocation that will execute SLURM on 3 nodes and will pass the `ENCAP_PROCID` environment variable to the script as the -i argument. In this example, the `ENCAP_PROCID` will take the values 0, 1, 2 depending on the node.
 ```
 encap run slurm_test.py -n test -sl_nodes 3 -args " -i \$ENCAP_PROCID"
 ```
-Alternatively the  ENCAP_PROCID can be directly read in your program see /examples/test_script_instances.py
+Alternatively `ENCAP_PROCID` can be read directly in your script, see for example /examples/test_script_instances.py
 
 The configuration file is located at ~/.encap/config.yml.
 
-Example config file that will restart the slurm job if it did not exit successfully:
+Example config file that will restart the SLURM job if it did not exit successfully:
 ```yml
+file_extension:
+  py: python -u
+
 slurm:
   account: <account>
   partition: <partition>
@@ -113,12 +116,12 @@ slurm:
     - fi
 ```
 
-{run.sh} and {run.slurm} will be replaced with the actual script and slurm file automatically upon execution.
+{run.sh} and {run.slurm} will be replaced with the actual script and SLURM file automatically upon execution.
 
-If you want to execute different slurm instances in parallel you can use the -sl_i <i> argument. This will create *i* different slurm jobs.
+If you want to execute different SLURM instances in parallel you can use the `-sl_i <i>` argument. This will create *i* different SLURM jobs.
 
-## More complex configuration files
-Sometimes you want to have different configuration files for different projects or even different experiments. Encap will recursively search for files called .encap.conf in the directory the script is located in and in all parent directories. Each .encap.conf file will be merged with the previous one. This allows you to have a global configuration file and then overwrite only parts of it for specific projects or experiments. For example you could have a global configuration file that sets the default slurm partition to "gpu" and then overwrite it for a specific project that does not need a gpu. See the examples/slurm_folder_script_extra_configs folder for more examples.
+## Nesting configuration files
+Sometimes you want to have different configuration files for different projects or even different experiments. Encap will recursively search for files called .encap.conf in the directory, the script is located in and in all parent directories. Each .encap.conf file will be merged with the previous one. This allows you to have a global configuration file and then overwrite only parts of it for specific projects or experiments. For example, you could have a global configuration file that sets the default SLURM partition to "gpu" and then overwrite it for a specific project that does not need a GPU. See the examples/slurm_folder_script_extra_configs folder for more examples.
 
 ## Folder mode
 If you want to run a script that depends on other files in the same folder you can use the folder mode. This will copy the entire folder to the experiment folder and then execute the script. This is useful for example if you have a custom .encap.conf file in the folder that you want to use for the experiment or if your script needs to execute other scripts in the same folder. The folder mode is automatically activated if instead of a script you pass a folder to encap. For example:
@@ -148,12 +151,12 @@ projects:
       <machine name>:
         ip: <ip>
 ```
-# SSH output to be ignored.
+### SSH output to be ignored.
 ssh_ignore: ["X11 forwarding request failed on channel"]
-# Folders to be ignored while rsyncing between local and remote machine
+### Folders to be ignored while rsyncing between local and remote machine
+```
 rsync_exclude: [".git", "*log*"]
 ```
-Alternatively, the config file can also be saved in the same folder as the encap script with the name .encap .
 
 ## Configuring Google Cloud
 TODO
