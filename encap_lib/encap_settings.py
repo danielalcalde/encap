@@ -16,11 +16,11 @@ def read_terminal_arguments(pargs):
     if pargs.i != 1:
         args_config["i"] = pargs.i
     
-    if pargs.file is not None:
-        args_config["file"] = pargs.file
-    
     if pargs.args is not None:
         args_config["args"] = pargs.args
+    
+    if pargs.script_name is not None:
+        args_config["script_name"] = pargs.script_name
     
     config = merge_dicts(config, args_config)
 

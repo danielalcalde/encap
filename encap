@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
-import time
 import os
 import encap_lib.encap_settings as settings
 from encap_lib.encap_lib import LocalMachine, get_machine, filename_and_file_extension, get_interpreter_from_file_extension, extract_folder_name
 from encap_lib.encap_lib import record_process, remove_process_from_database
-import yaml
+import glob
 from encap_lib import slurm
 
 def tail_pull(machine, run_folder_name, pid=None):
@@ -83,10 +82,13 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
     touch {run_folder_name}/log
     mkdir -p {run_folder_name}/slurm_files
     """)
-
+    if isinstance(slurm_settings["i"], int):
+        iterator = range(slurm_settings["i"])
+    else:
+        iterator = slurm_settings["i"]
 
     # Create the slurm script for all slurm instances
-    for i in slurm_settings["i"]:
+    for i in iterator:
         if i == 0:
             slurm_instance_text = ""
         else:
@@ -113,7 +115,7 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
             job_name = f"{job_name}_{args_}"
         
         # Generate the slurm settings script
-        code = slurm.generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name, executable_file_name, log_file_name, job_name=job_name)
+        code = slurm.generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_file_name, executable_file_name, log_file_name, job_name=job_name)
 
         # Write the slurm file
         machine.write_file(runslurm_file_name, code, verbose=True)
@@ -121,15 +123,20 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
         # Run the slurm file
         machine.run_code(f"sbatch {runslurm_file_name}", verbose=True)
 
-def get_file_name(folder_name):
-    i = folder_name[::-1].find("/")
-    if i == -1:
-        return folder_name
-    else:
-        i = len(folder_name) - i
-        return folder_name[i:]
+def get_script_name(run_folder_name, script_name):
+    
+    # Search in the run_folder for the script_name with * as a wildcard
+    script_name_ = os.path.join(run_folder_name, script_name)
+    script_names = glob.glob(script_name_)
+    assert len(script_names) == 1, f"Found {len(script_names)} scripts matching {script_name} in {run_folder_name}."
+    script_name_ = script_names[0]
 
-def mode_run_file(file_extension, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
+    # Remove the run_folder_name from the script_name
+    script_name = os.path.basename(script_name_)
+    
+    return script_name
+
+def mode_run_file(folder_name, run_folder_name, source_file_path, local_project_dir, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
 
     #Syncs folders
@@ -168,9 +175,9 @@ def mode_run_file(file_extension, folder_name, run_folder_name, source_file_path
     machine.push(source_file_path, target_file_path, directory=False, verbose=True)
 
     # Run the file and save outputs in log, save PID in the file pid.
-    mode_rerun_file(file_extension, folder_name=folder_name, run_folder_name=run_folder_name, target_file=target_file, local_project_dir=local_project_dir, target_file_path=target_file_path, machine=machine, pargs=pargs, rerun=False)
+    mode_rerun_file(run_folder_name=run_folder_name, local_project_dir=local_project_dir, machine=machine, pargs=pargs, rerun=False)
 
-def mode_run_folder(file_extension, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
+def mode_run_folder(folder_name, run_folder_name, source_file_path, local_project_dir, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
 
     # Syncs folders
@@ -207,19 +214,59 @@ def mode_run_folder(file_extension, folder_name, run_folder_name, source_file_pa
     # Copy the local version of pargs.target to the run_folder
     machine.push(source_file_path, run_folder_name + "/", directory=True, copy_full_dir=False, verbose=True)
 
-    # Run the file and save outputs in log, save PID in the file pid.
-    mode_rerun_file(file_extension, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=False)
+    # Patch settings with all .encap.conf files
+    settings.load_encap_config_files_recursive(os.path.join(os.getcwd(), run_folder_name))
+
+    # Infer the proper script_name
+    if "script_name" in settings.config:
+        script_name = settings.config["script_name"]
+    else:
+        # Defaul script name is run.*
+        script_name = "run.*"
     
+    script_name = get_script_name(run_folder_name, script_name)
+
+    settings.config["script_name"] = script_name
+    settings.args_config["script_name"] = script_name
+
+    # Run the file and save outputs in log, save PID in the file pid.
+    mode_rerun_file(run_folder_name=run_folder_name,
+                    local_project_dir=local_project_dir, machine=machine,
+                    pargs=pargs, rerun=False)
     
 
-def mode_rerun_file(file_extension, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
+def mode_rerun_file(run_folder_name, local_project_dir, machine, pargs, rerun=True, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
+
+    # Check if the capsule in run_folder_name exists
+    assert os.path.isdir(run_folder_name), f"The capsule {run_folder_name} does not exist."
+
 
     # Patch settings with all .encap.conf files
     settings.load_encap_config_files_recursive(os.path.join(os.getcwd(), run_folder_name))
     settings.write_config_file(os.path.join(run_folder_name, ".encap_history.conf"), settings.config,
                                comment="This file is automatically generated by encap. Effective encap configuration file from last run that has no effect on future runs.")
     
+    pid = None
+
+    # Read settings
+    if "args" in settings.config:
+        args = settings.config["args"]
+    else:
+        args = ""
+    
+    if "script_name" in settings.config:
+        target_file = settings.config["script_name"]
+    else:
+        # Infer the proper script_name, the default is run.* (This can only happen in folder mode)
+        target_file = get_script_name(run_folder_name, "run.*")
+        settings.config["script_name"] = target_file
+        settings.args_config["script_name"] = target_file
+    
+    target_file_path = os.path.join(run_folder_name, target_file)
+    _, file_extension = filename_and_file_extension(target_file_path)
+    
+
     # If .encap.conf file exists in the run_folder, load it, merge it with the comannd line arguments and save it
     if os.path.exists(os.path.join(run_folder_name, ".encap.conf")):
         run_folder_config = settings.read_config_file(os.path.join(run_folder_name, ".encap.conf"))
@@ -231,18 +278,9 @@ def mode_rerun_file(file_extension, folder_name, run_folder_name, local_project_
     settings.write_config_file(os.path.join(run_folder_name, ".encap.conf"), run_folder_config,
                                comment="This file is automatically generated by encap. This file will patch the global configuration file if the capsule is rerun.")
 
-
     if rerun:
         machine.sync_files()
-        machine.push(target_file_path, target_file_path, directory=False, verbose=True)
-    
-    pid = None
-
-    # Read settings
-    if settings.config["args"]:
-        args = settings.config["args"]
-    else:
-        args = ""
+        machine.push(target_file_path, target_file_path, directory=False, verbose=True) # TODO: The entire folder should be pushed, not just the file.
     
     # Are we using slurm?
     if not settings.using_slurm:
@@ -284,9 +322,9 @@ def parse_arguments():
 
     parser.add_argument("target", help="Name of the file to run.")
     parser.add_argument("-n", "--name", dest="name", help="Container name.", default=None)
-    parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default="")
+    parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default=None)
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
-    parser.add_argument("-f", "--file", dest="file", help="In case it is run on a folder this specifies the file that should be run. The default is run.py.", default="run.py")
+    parser.add_argument("-sn", "--script_name", dest="script_name", help="In case it is run on a folder this specifies the file that should be run. The default behaviour is to search for a file run.*.", default=None)
     parser.add_argument("-i", "--number_of_instances", dest="i", help="Number of instances to start in parallel. For each instance an enviromental variable ENCAP_PROCID=<instance_number> will be set. You can also pass a list or any python expression as a string. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20). Currently not compatible with slurm.", default=1, type=eval)
 
     # Slurm arguments
@@ -344,10 +382,6 @@ def main():
         root_path, folder_name = extract_folder_name(source_file_path)
 
         run_folder_name = os.path.join(root_path, "0encap_folder", folder_name, pargs.name)
-        target_file = pargs.file
-        target_file_path = os.path.join(run_folder_name, pargs.file) # Note that pargs.file = "run.py" by default
-
-        _, file_extension = filename_and_file_extension(target_file_path)
 
         is_file = False
 
@@ -355,11 +389,11 @@ def main():
         folder_name, file_extension = filename_and_file_extension(source_file_path)
 
         # Get the file name
-        file_name = get_file_name(source_file_path)
+        script_name = os.path.basename(source_file_path)
 
         run_folder_name = os.path.join(folder_name, pargs.name)
-        target_file = file_name
-        target_file_path = os.path.join(run_folder_name, file_name)
+        settings.config["script_name"] = script_name
+        target_file_path = os.path.join(run_folder_name, script_name)
         is_file = True
 
 
@@ -369,12 +403,18 @@ def main():
 
     if pargs.mode == "run":
         if is_file:
-            mode_run_file(file_extension, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs)
+            mode_run_file(folder_name=folder_name, run_folder_name=run_folder_name,
+                          source_file_path=source_file_path, local_project_dir=local_project_dir, target_file_path=target_file_path,
+                          machine=machine, pargs=pargs)
         else:
-            mode_run_folder(file_extension, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs)
+            mode_run_folder(folder_name=folder_name, run_folder_name=run_folder_name,
+                            source_file_path=source_file_path, local_project_dir=local_project_dir,
+                            machine=machine, pargs=pargs)
         
     elif pargs.mode == "rerun":
-        mode_rerun_file(file_extension, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs)
+        mode_rerun_file(run_folder_name=run_folder_name,
+                        local_project_dir=local_project_dir,
+                        machine=machine, pargs=pargs)
         
         
     elif pargs.mode == "tail":
@@ -419,48 +459,6 @@ def main():
         print("Killed process:", pid)
         print("Currently killing is not supported.")
 
-    elif pargs.mode == "queue":
-        localmachine.push(source_file_path, folder_name + "/" + pargs.name +"/" + file_name, directory=False, verbose=True)
-        localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
-
-        if pargs.vm is None:
-            assert False
-        code = f"""
-        cd ~/.encap
-        mkdir -p queue
-        cd queue
-        echo "encap rerun {pargs.target} -n {pargs.name} -vm {pargs.vm} -args '{pargs.args}'" &>> {pargs.vm}
-
-        if [[ -a {pargs.vm}_pending ]]
-        then
-            echo "encap rerun {pargs.target} -n {pargs.name} -vm {pargs.vm} -y -args '{pargs.args}'" &>> {pargs.vm}_pending
-        fi
-        """
-        localmachine.run_code(code)
-
-    elif pargs.mode == "runqueue":
-        assert pargs.name is not None, "The container_name -n must be specified."
-
-        if pargs.vm is None:
-            assert False
-
-        task_f = f"~/.encap/queue/{pargs.vm}"
-        code = f"""
-        cp {task_f} {task_f}_pending
-
-        while [[ -s {task_f}_pending ]]
-        do
-            echo `head -n 1 {task_f}_pending` > {task_f}_current
-            cat {task_f}_current
-            bash {task_f}_current
-            sed -i '1d' {task_f}_pending
-
-        done
-        rm {task_f}_pending
-        rm {task_f}_current
-        """
-        machine.run_code(code, output=True, verbose=True)
-
     elif pargs.mode == "pull":
         assert pargs.name is not None, "The container_name -n must be specified."
         machine.pull(run_folder_name, run_folder_name, directory=True, verbose=True)
@@ -468,24 +466,6 @@ def main():
     elif pargs.mode == "push":
         assert pargs.name is not None, "The container_name -n must be specified."
         machine.push(run_folder_name, run_folder_name, directory=True, verbose=True)
-
-    elif pargs.mode == "loadsave":
-        assert pargs.name is not None, "The container_name -n must be specified."
-        localmachine.push(source_file_path, folder_name + "/save/" + file_name, directory=False, verbose=True)
-        localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
-
-    elif pargs.mode == "save":
-        assert pargs.name is not None, "The container_name -n must be specified."
-        localmachine.push(source_file_path, folder_name + "/" + pargs.name +"/" + file_name, directory=False, verbose=True)
-        localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
-
-    elif pargs.mode == "load":
-        assert pargs.name is not None, "The container_name -n must be specified."
-        localmachine.push(target_file_path, source_file_path, directory=False, verbose=True)
-
-    elif pargs.mode == "reload":
-        assert pargs.name is not None, "The container_name -n must be specified."
-        localmachine.push(folder_name + "/save/" + file_name, source_file_path, directory=False, verbose=True)
 
     elif pargs.mode == "pkill":
         machine.run_code(f"pkill -f '{pargs.target}' -u {machine.username}", output=True, verbose=True)

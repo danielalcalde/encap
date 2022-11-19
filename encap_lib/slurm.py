@@ -3,7 +3,7 @@ from encap_lib.encap_lib import get_interpreter_from_file_extension
 import yaml
 import sys
 
-def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=None,
+def generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=None,
                           executable_file_name=None, log_file_name=None, 
                           job_name=None, interpreter=None, interpreter_args=None):
     """ Generate slurm script for a given settings.
@@ -33,8 +33,8 @@ def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=No
         if not key in exceptions:
             code += f'#SBATCH --{key}={value}\n'
     
-    if slurm_settings.get("time") is None:
-        code += f'#SBATCH --time=24:00:00\n'
+    if not ("time" in slurm_settings):
+        assert False, "No time specified in slurm settings."
     
     if slurm_settings.get("code") is None:
         code += f"srun bash {executable_file_name}"
@@ -45,7 +45,6 @@ def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=No
             c = "\n".join(c) 
 
         c = c.replace("{run_folder_name}", run_folder_name)
-        c = c.replace("{i}", f"{slurm_settings.get('i')}") #TODO: Not sure if this is correct
         c = c.replace("{run.slurm}", runslurm_file_name)
         c = c.replace("{run.sh}", executable_file_name)
         code += c
@@ -95,28 +94,31 @@ def initialize_slurm_settings(pargs):
     slurm_settings = {}
     if pargs.sl_nodes is not None:
         slurm_settings["nodes"] = pargs.sl_nodes
+
     if pargs.sl_ntpn is not None:
         slurm_settings["ntasks-per-node"] = pargs.sl_ntpn
+
     if pargs.sl_time is not None:
         slurm_settings["time"] = pargs.sl_time
+
     if pargs.sl_partition is not None:
         slurm_settings["partition"] = pargs.sl_partition
+
     if pargs.sl_account is not None:
         slurm_settings["account"] = pargs.sl_account
+
     if pargs.sl_cpus is not None:
         slurm_settings["cpus-per-task"] = pargs.sl_cpus
+
     if pargs.sl_i is not None:
-        if isinstance(pargs.sl_i, int):
-            slurm_settings["i"] = list(range(pargs.sl_i))
-        else:
-            slurm_settings["i"] = list(pargs.sl_i)
+        slurm_settings["i"] = pargs.sl_i
     
     if len(slurm_settings) == 0:
         if not pargs.slurm:
             return None
     
     if not ("i" in slurm_settings):
-        slurm_settings["i"] = list(range(1))
+        slurm_settings["i"] = 1
     
     return slurm_settings
 
