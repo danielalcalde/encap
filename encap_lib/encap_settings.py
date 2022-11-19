@@ -14,6 +14,9 @@ def read_terminal_arguments(pargs):
         assert pargs.i == 1, "The -i flag is not supported when using slurm."
     
     if pargs.i != 1:
+        if not isinstance(pargs.i, int):
+            pargs.i = list(pargs.i)
+        
         args_config["i"] = pargs.i
     
     if pargs.args is not None:
@@ -28,7 +31,7 @@ def read_terminal_arguments(pargs):
 def read_config_file(file_name):
     with open(file_name, 'r') as ymlfile:
         try:
-            config_ = yaml.load(ymlfile, Loader=yaml.FullLoader)
+            config_ = yaml.load(ymlfile, Loader=yaml.SafeLoader)
         except yaml.YAMLError as exc:
             print("Error in configuration file")
             sys.exit(exc)
@@ -91,22 +94,6 @@ def get_all_items(config_location):
     for item in config_items:
         out[item] = get_item(item, config_location)
     return out
-
-
-def read_settings_from_yml(file_name, settings=None):
-    if settings is None:
-        settings = {}
-    
-    try:
-        with open(file_name, 'r') as ymlfile:
-            config = yaml.load(ymlfile, Loader=yaml.FullLoader)
-            if config is not None:
-                config.update(settings)
-                settings = config
-    except FileNotFoundError:
-        pass
-    
-    return settings
 
 
 # Code to help read the config file

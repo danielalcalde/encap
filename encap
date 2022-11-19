@@ -82,6 +82,9 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
     touch {run_folder_name}/log
     mkdir -p {run_folder_name}/slurm_files
     """)
+    if not ("i" in slurm_settings):
+        slurm_settings["i"] = 1
+
     if isinstance(slurm_settings["i"], int):
         iterator = range(slurm_settings["i"])
     else:
