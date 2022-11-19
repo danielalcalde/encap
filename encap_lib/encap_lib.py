@@ -550,9 +550,9 @@ def filename_and_file_extension(a):
         file_without_extension = a[:-len(file_extension) - 1]
         return file_without_extension, file_extension
 
-def extract_folder_name(a):
-    a_split = a.split("/")
-    return a_split[-1]
+def extract_folder_name(path):
+    path_split = os.path.split(path)
+    return  os.path.join(*path_split[:-1]), path_split[-1]
 
 def record_process(vm, name, i):
     remove_process_from_database(name, i)

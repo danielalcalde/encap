@@ -24,9 +24,10 @@ done < <(tail -f {run_folder_name}/log)
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
 # Bash code to run the file and save outputs in log, save PID in the file pid.
-def run(machine, interpreter, args, run_folder_name, target_file, target_file_path, interprter_args="", number_of_instances=1):
+def run(machine, file_extension, args, run_folder_name, target_file, target_file_path, interprter_args="", number_of_instances=1):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
     
+    interpreter = get_interpreter_from_file_extension(file_extension)
 
     if isinstance(number_of_instances, int):
         iterator = range(number_of_instances)
@@ -55,7 +56,7 @@ def run(machine, interpreter, args, run_folder_name, target_file, target_file_pa
         {print_instance}
         echo "{target_file_path} {args}  \n" &>> {log}
         # Tee avoids buffering
-        setsid nohup bash -c "time {interpreter} {interprter_args} {target_file} {args} 2>&1 | tee -a /dev/null" &>> {log} &!
+        setsid nohup bash -c "time ({interpreter} {interprter_args} {target_file} {args}) 2>&1 | tee -a /dev/null" &>> {log} &!
         PID=$!
         echo $PID 
         '''
@@ -73,7 +74,7 @@ def run(machine, interpreter, args, run_folder_name, target_file, target_file_pa
 
     return pids[0]
 
-def run_slurm(machine, interpreter, target, args, run_folder_name, target_file, target_file_path, slurm_settings, interpreter_args="", name=None):
+def run_slurm(machine, file_extension, target, args, run_folder_name, target_file, target_file_path, slurm_settings, interpreter_args="", name=None):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
     # Delete previous log file and create a new one
@@ -96,7 +97,7 @@ def run_slurm(machine, interpreter, target, args, run_folder_name, target_file, 
         log_file_name = f"{run_folder_name}/slurm_files/log{slurm_instance_text}.slurm"
 
         # Script to run the file and save outputs in log
-        code, args_replace = slurm.generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, target_file=target_file, slurm_instance=i, ntpn=slurm_settings["ntasks-per-node"])
+        code, args_replace = slurm.generate_slurm_executable(file_extension, run_folder_name, target_file_path, args, target_file=target_file, slurm_instance=i, ntpn=slurm_settings["ntasks-per-node"])
         # Save the script in the run_folder
         machine.write_file(executable_file_name, code, verbose=True)
 
@@ -128,7 +129,7 @@ def get_file_name(folder_name):
         i = len(folder_name) - i
         return folder_name[i:]
 
-def mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
+def mode_run_file(file_extension, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
 
     #Syncs folders
@@ -167,12 +168,12 @@ def mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, l
     machine.push(source_file_path, target_file_path, directory=False, verbose=True)
 
     # Run the file and save outputs in log, save PID in the file pid.
-    mode_rerun_file(interpreter, folder_name=folder_name, run_folder_name=run_folder_name, target_file=target_file, local_project_dir=local_project_dir, target_file_path=target_file_path, machine=machine, pargs=pargs, rerun=False)
+    mode_rerun_file(file_extension, folder_name=folder_name, run_folder_name=run_folder_name, target_file=target_file, local_project_dir=local_project_dir, target_file_path=target_file_path, machine=machine, pargs=pargs, rerun=False)
 
-def mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
+def mode_run_folder(file_extension, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
 
-    #Syncs folders
+    # Syncs folders
     machine.sync_files()
 
     # Creates folder if it does not exist and checks if the caspsule already exists.
@@ -204,55 +205,60 @@ def mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path,
         raise Exception(f"Unexpected value {out}.")
 
     # Copy the local version of pargs.target to the run_folder
-    machine.push(source_file_path, run_folder_name, directory=True, copy_full_dir=False, verbose=True)
-    
-    mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=False)
+    machine.push(source_file_path, run_folder_name + "/", directory=True, copy_full_dir=False, verbose=True)
+
     # Run the file and save outputs in log, save PID in the file pid.
+    mode_rerun_file(file_extension, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=False)
+    
     
 
-def mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
+def mode_rerun_file(file_extension, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs, rerun=True, interpreter_args=""):
     assert pargs.name is not None, "The container_name -n must be specified."
-    saved_settings = {}
-    # Add pargs.args to the saved_settings
-    print(target_file)
-    if pargs.args != "":
-        saved_settings["args"] = pargs.args
+
+    # Patch settings with all .encap.conf files
+    settings.load_encap_config_files_recursive(os.path.join(os.getcwd(), run_folder_name))
+    settings.write_config_file(os.path.join(run_folder_name, ".encap_history.conf"), settings.config,
+                               comment="This file is automatically generated by encap. Effective encap configuration file from last run that has no effect on future runs.")
+    
+    # If .encap.conf file exists in the run_folder, load it, merge it with the comannd line arguments and save it
+    if os.path.exists(os.path.join(run_folder_name, ".encap.conf")):
+        run_folder_config = settings.read_config_file(os.path.join(run_folder_name, ".encap.conf"))
+
+        run_folder_config = settings.merge_dicts(run_folder_config, settings.args_config)
+    else:
+        run_folder_config = settings.args_config
+    
+    settings.write_config_file(os.path.join(run_folder_name, ".encap.conf"), run_folder_config,
+                               comment="This file is automatically generated by encap. This file will patch the global configuration file if the capsule is rerun.")
+
 
     if rerun:
         machine.sync_files()
         machine.push(target_file_path, target_file_path, directory=False, verbose=True)
-        # Read saved settings in the run_folder
-        saved_settings = settings.read_settings_from_yml(f"{run_folder_name}/.encap_config", saved_settings)
-    
-    if "args" in saved_settings:
-        pargs.args = saved_settings["args"]
     
     pid = None
 
-    # Initialize slurm settings from the terminal arguments
-    slurm_settings = slurm.initialize_slurm_settings(pargs)
-
-    # Are we using slurm?
-    if slurm_settings is None:
-        pid = run(machine, interpreter, pargs.args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, number_of_instances=pargs.i)
+    # Read settings
+    if settings.config["args"]:
+        args = settings.config["args"]
     else:
-        assert pargs.i == 1, "The -i flag is not supported when using slurm."
+        args = ""
+    
+    # Are we using slurm?
+    if not settings.using_slurm:
+        if "i" in settings.config:
+            number_of_instances = settings.config["i"]
+        else:
+            number_of_instances = 1
+        
+        pid = run(machine, file_extension, args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, number_of_instances=number_of_instances)
+    else:
 
-        # Read the slurm config file in the run folder if it exsists and it is a rerun
-        if rerun:
-            slurm_settings = slurm.read_slurm_settings_from_yml(f"{run_folder_name}/.slurm_config", slurm_settings)
-        
-        slurm_settings = slurm.read_slurm_settings_from_encapconfig(pargs, local_project_dir, slurm_settings)
-        
-        # Write the updated slurm config into a yml file
-        with open(f"{run_folder_name}/.slurm_config", 'w') as ymlfile:
-            yaml.dump(slurm_settings, ymlfile, default_flow_style=False)
-        
-        with open(f"{run_folder_name}/.encap_config", 'w') as ymlfile:
-            yaml.dump(saved_settings, ymlfile, default_flow_style=False)
+        # Load the slurm settings from the loaded config file
+        slurm_settings = slurm.read_slurm_settings_from_encapconfig(pargs.vm, local_project_dir)
         
         # Run the SLURM job with the slurm config file
-        run_slurm(machine, interpreter, pargs.target, pargs.args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, slurm_settings=slurm_settings, name=pargs.name)
+        run_slurm(machine, file_extension, pargs.target, args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, slurm_settings=slurm_settings, name=pargs.name)
 
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
@@ -280,7 +286,7 @@ def parse_arguments():
     parser.add_argument("-n", "--name", dest="name", help="Container name.", default=None)
     parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default="")
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
-    parser.add_argument("-f", "--file", dest="file", help="In case it is run on a folder this specifies the file that should be run.", default="run.py")
+    parser.add_argument("-f", "--file", dest="file", help="In case it is run on a folder this specifies the file that should be run. The default is run.py.", default="run.py")
     parser.add_argument("-i", "--number_of_instances", dest="i", help="Number of instances to start in parallel. For each instance an enviromental variable ENCAP_PROCID=<instance_number> will be set. You can also pass a list or any python expression as a string. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20). Currently not compatible with slurm.", default=1, type=eval)
 
     # Slurm arguments
@@ -314,13 +320,13 @@ def parse_arguments():
     if pargs.dryrun:
         settings.dryrun = True
     
+    settings.read_terminal_arguments(pargs) 
     return pargs
 
 def main():
 
     pargs = parse_arguments()
 
-    t1 = time.time()
     local_project_dir = os.getcwd()
     source_file_path = pargs.target
     localmachine = LocalMachine(local_project_dir)
@@ -334,46 +340,41 @@ def main():
     if os.path.isdir(source_file_path):
         if source_file_path[-1] == "/":
             source_file_path = source_file_path[:-1]
-        folder_name = extract_folder_name(source_file_path)
+        
+        root_path, folder_name = extract_folder_name(source_file_path)
 
-        run_folder_name = f"0encap_folder/{folder_name}/{pargs.name}/"
+        run_folder_name = os.path.join(root_path, "0encap_folder", folder_name, pargs.name)
         target_file = pargs.file
-        target_file_path = run_folder_name + pargs.file # Note that pargs.file = "run.py" by default
+        target_file_path = os.path.join(run_folder_name, pargs.file) # Note that pargs.file = "run.py" by default
 
         _, file_extension = filename_and_file_extension(target_file_path)
-        interpreter = get_interpreter_from_file_extension(file_extension)
 
         is_file = False
 
     elif os.path.isfile(source_file_path):
         folder_name, file_extension = filename_and_file_extension(source_file_path)
-        interpreter = get_interpreter_from_file_extension(file_extension)
 
         # Get the file name
         file_name = get_file_name(source_file_path)
 
-        run_folder_name = folder_name + "/" + str(pargs.name)
+        run_folder_name = os.path.join(folder_name, pargs.name)
         target_file = file_name
-        target_file_path = run_folder_name + "/" + file_name
+        target_file_path = os.path.join(run_folder_name, file_name)
         is_file = True
 
 
     else:
         assert False, f"{source_file_path} is neither a directory nor a file."
-
     
-    # See status
-    # Create VM and set it up:
-    #   Add GPU support
 
     if pargs.mode == "run":
         if is_file:
-            mode_run_file(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs)
+            mode_run_file(file_extension, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs)
         else:
-            mode_run_folder(interpreter, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs)
+            mode_run_folder(file_extension, folder_name, run_folder_name, source_file_path, local_project_dir, target_file, target_file_path, machine, pargs)
         
     elif pargs.mode == "rerun":
-        mode_rerun_file(interpreter, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs)
+        mode_rerun_file(file_extension, folder_name, run_folder_name, local_project_dir, target_file, target_file_path, machine, pargs)
         
         
     elif pargs.mode == "tail":
@@ -395,41 +396,6 @@ def main():
                 machine.pull(run_folder_name, run_folder_name, directory=True)
 
                 machine.run_code(f"cat {run_folder_name}/log", verbose=True, output=True)
-
-    elif pargs.mode == "last":
-
-        code = f'''
-        j=1
-        if [ -d "{folder_name}" ]
-        then
-            while [ -d "{folder_name}/$j" ]
-            do
-                j=$((j+1))
-            done
-            echo $j
-        else
-            if [ -f "{source_file_path}" ]
-            then
-                echo "NoFolder"
-            else
-                echo "NoFile"
-            fi
-        fi
-        '''
-        out = localmachine.run_code(code, output=True)
-        print(out)
-        assert len(out) == 1, str(out)
-        out = out[0]
-
-        if out == "NoFile":
-            print(f"No file with name {source_file_path} exists.")
-
-        elif out == "NoFolder":
-            print("No folder has been created yet.")
-
-        else:
-            ll = int(out) - 1
-            print(f"The last instance that is in the file system is {ll}.")
 
     elif pargs.mode == "kill":
         # checks if folder exists, if yes take the pid and kill it.

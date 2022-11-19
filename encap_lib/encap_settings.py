@@ -1,55 +1,81 @@
 import os
 import yaml
 import sys
+import encap_lib
 
-config_folder = os.getenv("HOME") + "/.encap"
-temp_file = config_folder + "/temp"
+def read_terminal_arguments(pargs):
+    global args_config, config, using_slurm
 
-config_file_name = config_folder + "/config.yml"
+    slurm_conf = encap_lib.slurm.initialize_slurm_settings(pargs)
 
-running_processes_file = os.getenv("HOME") + "/.encap/running_processes.yml"
-config_items = ["dir", "ip", "sync", "user", "ssh_ignore", "ssh_options", "sync_files",
-                "rsync_exclude", "project", "zone", "nfs", "machine_config",
-                "GOOGLE_APPLICATION_CREDENTIALS", "machine_config", "slurm"]
-
-# If .encap does not exist
-if not os.path.isdir(config_folder):
-    os.mkdir(config_folder)
-
-# If .encap/config.yml does not exist
-if not os.path.isfile(config_file_name):
-    f = {"py": "python -u", "sh": "bash", "jl": "julia"}
-    d = {"file_extension": f}
-    with open(config_file_name, 'w') as ymlfile:
-        yaml.dump(d, ymlfile, default_flow_style=False)
-
-
-# Try to find a .encap file in parent directories
-path = os.getcwd()
-rest = "a"
-while rest != "":
-    path, rest = os.path.split(path)
-    file_path = os.path.join(path, rest, ".encap")
-    if os.path.isfile(file_path):
-        config_file_name = file_path
-        break
-
-# Open config file
-with open(config_file_name, 'r') as ymlfile:
-    try:
-        config = yaml.load(ymlfile, Loader=yaml.FullLoader)
-    except yaml.YAMLError as exc:
-        print("Error in configuration file")
-        sys.exit(exc)
+    if slurm_conf is not None:
+        args_config["slurm"] = slurm_conf
+        using_slurm = True
+        assert pargs.i == 1, "The -i flag is not supported when using slurm."
+    
+    if pargs.i != 1:
+        args_config["i"] = pargs.i
+    
+    if pargs.file is not None:
+        args_config["file"] = pargs.file
+    
+    if pargs.args is not None:
+        args_config["args"] = pargs.args
+    
+    config = merge_dicts(config, args_config)
 
 
+def read_config_file(file_name):
+    with open(file_name, 'r') as ymlfile:
+        try:
+            config_ = yaml.load(ymlfile, Loader=yaml.FullLoader)
+        except yaml.YAMLError as exc:
+            print("Error in configuration file")
+            sys.exit(exc)
+    return config_
 
+def write_config_file(file_name, settings, comment=""):
+    with open(file_name, 'w') as ymlfile:
+        if comment != "":
+            ymlfile.write(f"# {comment}\n")
+        
+        yaml.dump(settings, ymlfile, default_flow_style=False)
 
-debug = False
-dryrun = False
+def find_encap_config_files(path):
+    """Find all .encap files in parent directories"""
+    config_file_names = []
+    rest = None
+    while rest != "":
+        path, rest = os.path.split(path)
+        file_path = os.path.join(path, rest, ".encap.conf")
+        if os.path.isfile(file_path):
+            config_file_names.append(file_path)
+        
+    return config_file_names[::-1]
 
+def load_encap_config_files_recursive(path):
+    """Load all .encap files in parent directories"""
+    global config, args_config
+
+    config_file_names = find_encap_config_files(path)
+    for file_name in config_file_names:
+        config_patch = read_config_file(file_name)
+        config = merge_dicts(config, config_patch)
+    
+    # Reload config with command line arguments in case they overwrite config file settings
+    merge_dicts(config, args_config)
+
+def merge_dicts(dict1, dict2):
+    """Merge two dictionaries"""
+    for k in dict2:
+        if k in dict1 and isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
+            merge_dicts(dict1[k], dict2[k])
+        else:
+            dict1[k] = dict2[k]
+    return dict1
 
 def get_item(item, config_location):
+    global config
     cc = config
     out = None
     for loc in config_location:
@@ -81,3 +107,40 @@ def read_settings_from_yml(file_name, settings=None):
         pass
     
     return settings
+
+
+# Code to help read the config file
+home = os.path.expanduser("~")
+
+config_folder = os.path.join(home, ".encap")
+temp_file = os.path.join(config_folder, "temp")
+
+config_file_name = os.path.join(config_folder, "config.yml")
+
+running_processes_file = os.path.join(home, ".encap", "running_processes.yml")
+
+config_items = ["dir", "ip", "sync", "user", "ssh_ignore", "ssh_options", "sync_files",
+                "rsync_exclude", "project", "zone", "nfs", "machine_config",
+                "GOOGLE_APPLICATION_CREDENTIALS", "machine_config", "slurm"]
+
+# If .encap does not exist
+if not os.path.isdir(config_folder):
+    os.mkdir(config_folder)
+
+# If .encap/config.yml does not exist
+if not os.path.isfile(config_file_name):
+    f = {"py": "python -u", "sh": "bash", "jl": "julia"}
+    d = {"file_extension": f}
+    with open(config_file_name, 'w') as ymlfile:
+        yaml.dump(d, ymlfile, default_flow_style=False)
+
+
+path = os.getcwd()
+
+# Open config file
+config = read_config_file(config_file_name)
+args_config = dict()
+
+debug = False
+dryrun = False
+using_slurm = False

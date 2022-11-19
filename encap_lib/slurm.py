@@ -1,4 +1,5 @@
 import encap_lib.encap_settings as settings
+from encap_lib.encap_lib import get_interpreter_from_file_extension
 import yaml
 import sys
 
@@ -51,10 +52,10 @@ def generate_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=No
 
     return code
 
-def generate_slurm_executable(interpreter, run_folder_name, target_file_path, args, target_file, slurm_instance=0, ntpn=1, interpreter_args=""):
+def generate_slurm_executable(file_extension, run_folder_name, target_file_path, args, target_file, slurm_instance=0, ntpn=1, interpreter_args=""):
     """ Generate slurm executable.
     """
-
+    interpreter = get_interpreter_from_file_extension(file_extension)
     args = args.replace("{i}", f"{slurm_instance}")
         
     code = f'''#!/bin/bash
@@ -119,13 +120,13 @@ def initialize_slurm_settings(pargs):
     
     return slurm_settings
 
-def read_slurm_settings_from_encapconfig(pargs, local_project_dir, slurm_settings=None):
+def read_slurm_settings_from_encapconfig(vm, local_project_dir, slurm_settings=None):
     if slurm_settings is None:
         slurm_settings = {}
     
     try:
-        if pargs.vm:
-            slurm_settings2 = settings.get_item("slurm", ["projects", local_project_dir, "ssh", pargs.vm])
+        if vm is not None:
+            slurm_settings2 = settings.get_item("slurm", ["projects", local_project_dir, "ssh", vm])
         else:
             slurm_settings2 = settings.get_item("slurm", ["projects", local_project_dir])
     except KeyError:
