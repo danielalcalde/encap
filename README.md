@@ -1,4 +1,4 @@
-# Encap (encapsulate)
+# encap (encapsulate)
 Encap is a simple tool to keep track of computational experiments.
 This program is intended to be used for scientific computing, it makes it easier to run different experiments in different containers and keep track of results.
 
