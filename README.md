@@ -59,6 +59,13 @@ pip install git+https://github.com/danielalcalde/encap
 encap -h
 ```
 
+## Rerun a previous experiment
+To rerun a previous experiment you can use encap in rerun mode:
+```bash
+encap rerun scripts/my_script.py -n test
+```
+This will without copying the script again, rerun the experiment. This is useful if you want to rerun an experiment with different parameters. You can for example copy the script and change the parameters and then rerun the modified script.
+
 ## Starting several experiments in parallel
 #### my_script.py
 ```python
@@ -130,6 +137,15 @@ encap run examples/folder_script -n test
 ```
 this will copy the entire folder to the experiment folder and then execute the script called run.* in the folder.
 Note that the script name can be different from run.* if it is specified with the -f argument or if the folder contains a .encap.conf file with the field script_name set to the name of the script.
+
+## Follow git
+If you want to keep track of the commit in a git repository you can add the following to your .encap.conf file:
+```yml
+git-track:
+  - <repo_dir_1>
+  - <repo_dir_2>
+```
+This will write the commit hash of the current commit in the repository to the .encap_history.conf file in the experiment folder. This can be useful if you want to keep track of the exact commit that was used for a specific experiment in case in the future you want to reproduce the results.
 
 ## Configuring SSH (untested with newest features)
 The script can be also executed on a remote server through ssh. For this, a mirror of the local folder is created on the remote server.
