@@ -2,6 +2,8 @@ import encap_lib.encap_settings as settings
 from encap_lib.encap_lib import get_interpreter_from_file_extension
 import yaml
 import sys
+import os
+import warnings
 
 def generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_file_name=None,
                           executable_file_name=None, log_file_name=None, 
@@ -56,7 +58,17 @@ def generate_slurm_executable(file_extension, run_folder_name, target_file_path,
     """
     # If the interpreter has not been specified, get it from the file extension
     interpreter = get_interpreter_from_file_extension(file_extension, ignore_file_extensior_if_interpreter_set_in_settings=True)
-    
+
+    # Chech if the files is executable, if yes then run it directly
+    if os.access(target_file_path, os.X_OK):
+        run_the_experiment = f"""bash -c "time ./{target_file} {args} 2>&1 | tee -a /dev/null" &>> $log"""
+
+        # Give warning if an interpreter is set in the settings file
+        if "interpreter" in settings.config:
+            warnings.warn(f"WARNING: 'interpreter' is set in the settings files, but your file is executable. The interpreter in the (settings file)/(command line) will be ignored.", UserWarning)
+    else:
+        run_the_experiment = f"""bash -c "time {interpreter} {interpreter_args} {target_file} {args} 2>&1 | tee -a /dev/null" &>> $log"""
+
     args = args.replace("{i}", f"{slurm_instance}")
         
     code = f'''#!/bin/bash
@@ -88,7 +100,8 @@ def generate_slurm_executable(file_extension, run_folder_name, target_file_path,
     echo "{target_file_path} {args}" &>> $log
     echo "" &>> $log
     #(time {interpreter} {target_file} {args}) &>> $log && echo {chr(4)} &>> $log without tee for unbuffered output
-    bash -c "time {interpreter} {interpreter_args} {target_file} {args} 2>&1 | tee -a /dev/null" &>> $log
+    {run_the_experiment}
+    echo {chr(4)} &>> $log
     '''
     return code, args
 
