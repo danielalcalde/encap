@@ -56,7 +56,7 @@ and generates three files:
 pip install git+https://github.com/danielalcalde/encap
 ```
 
-## For help with all the options:
+## Help with all the options
 ```bash
 encap -h
 ```
