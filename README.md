@@ -3,8 +3,8 @@ Encap is a simple tool to keep track of computational experiments.
 This program is intended to be used for scientific computing, it makes it easier to run different experiments in different containers and keep track of results.
 
 It currently has support for:
-* Reruning old experiments
-* Tracking git repostories
+* Rerunning old experiments
+* Tracking git repositories
 * Starting several experiments in parallel
 * Running experiments on SLURM
 * Running experiments locally/remotely through ssh
@@ -61,7 +61,7 @@ pip install git+https://github.com/danielalcalde/encap
 encap -h
 ```
 
-## Rerun a previous experiment
+## Rerunning a previous experiment
 To rerun a previous experiment you can use encap in rerun mode:
 ```bash
 encap rerun scripts/my_script.py -n test
@@ -97,6 +97,17 @@ will run the script three times in parallel. It will create the files:
 
 ## More Examples
 Several examples can be found in the examples folder.
+
+## Choose a script interpreter
+There are 3 ways to choose with which interpreter your file will be executed. The first one is to set a custom file extension in the configuration file:
+```yml
+file_extension:
+  go: go run
+```
+The second option is to make your script executable, this will directly execute it. Lastly, you can define the interpreter directly in the command line:
+```sh
+encap run my_script.go -n <version> --interpreter "go run"
+```
 
 ## Configuring Slurm
 Example encap invocation that will execute SLURM on 3 nodes and will pass the `ENCAP_PROCID` environment variable to the script as the -i argument. In this example, the `ENCAP_PROCID` will take the values 0, 1, 2 depending on the node.
@@ -147,7 +158,7 @@ git-track:
   - <repo_dir_1>
   - <repo_dir_2>
 ```
-This will write the commit hash of the current commit in the repository to the .encap_history.conf file in the experiment folder. This can be useful if you want to keep track of the exact commit that was used for a specific experiment in case in the future you want to reproduce the results.
+This will write the commit hash of the current commit in the repository to the .encap_history.conf file in the experiment folder. This can be useful if you want to keep track of the exact commit that was used for a specific experiment in the case that in the future you want to reproduce the results.
 
 ## Configuring SSH (untested with newest features)
 The script can be also executed on a remote server through ssh. For this, a mirror of the local folder is created on the remote server.
