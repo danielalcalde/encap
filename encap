@@ -4,7 +4,8 @@ import os
 import glob
 
 import encap_lib.encap_settings as settings
-from encap_lib.encap_lib import LocalMachine, get_machine, filename_and_file_extension, get_interpreter_from_file_extension, extract_folder_name
+from encap_lib.machines import LocalMachine
+from encap_lib.encap_lib import get_machine, filename_and_file_extension, get_interpreter_from_file_extension, extract_folder_name
 from encap_lib.encap_lib import record_process, remove_process_from_database
 from encap_lib import slurm
 from encap_lib.git_tracker import get_commit_hashes
