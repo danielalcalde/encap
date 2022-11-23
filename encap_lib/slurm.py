@@ -54,7 +54,9 @@ def generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_fil
 def generate_slurm_executable(file_extension, run_folder_name, target_file_path, args, target_file, slurm_instance=0, ntpn=1, interpreter_args=""):
     """ Generate slurm executable.
     """
-    interpreter = get_interpreter_from_file_extension(file_extension)
+    # If the interpreter has not been specified, get it from the file extension
+    interpreter = get_interpreter_from_file_extension(file_extension, ignore_file_extensior_if_interpreter_set_in_settings=True)
+    
     args = args.replace("{i}", f"{slurm_instance}")
         
     code = f'''#!/bin/bash

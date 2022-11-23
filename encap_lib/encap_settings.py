@@ -25,6 +25,9 @@ def read_terminal_arguments(pargs):
     if pargs.script_name is not None:
         args_config["script_name"] = pargs.script_name
     
+    if pargs.interpreter is not None:
+        args_config["interpreter"] = pargs.interpreter
+    
     config = merge_dicts(config, args_config)
 
 

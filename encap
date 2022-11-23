@@ -28,8 +28,10 @@ done < <(tail -f {run_folder_name}/log)
 # Bash code to run the file and save outputs in log, save PID in the file pid.
 def run(machine, file_extension, args, run_folder_name, target_file, target_file_path, interprter_args="", number_of_instances=1):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
-    
-    interpreter = get_interpreter_from_file_extension(file_extension)
+    print(settings.config)
+
+    # Get interpreter from file extension
+    interpreter = get_interpreter_from_file_extension(file_extension, ignore_file_extensior_if_interpreter_set_in_settings=True)
 
     if isinstance(number_of_instances, int):
         iterator = range(number_of_instances)
@@ -340,6 +342,7 @@ def parse_arguments():
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
     parser.add_argument("-sn", "--script_name", dest="script_name", help="In case it is run on a folder this specifies the file that should be run. The default behaviour is to search for a file run.*.", default=None)
     parser.add_argument("-i", "--number_of_instances", dest="i", help="Number of instances to start in parallel. For each instance an enviromental variable ENCAP_PROCID=<instance_number> will be set. You can also pass a list or any python expression as a string. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20). Currently not compatible with slurm.", default=1, type=eval)
+    parser.add_argument("-int", "--interpreter", dest="interpreter", help="The interpreter to use. Default is to infer it from the file extension.", default=None)
 
     # Slurm arguments
     parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Run the job on slurm. If any slurm option is used this is True by default.", default=False)

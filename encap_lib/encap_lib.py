@@ -105,7 +105,12 @@ def get_machine(vm, local_project_dir):
     
     return machine
 
-def get_interpreter_from_file_extension(f):
+def get_interpreter_from_file_extension(f, ignore_file_extensior_if_interpreter_set_in_settings=False):
+    print("adad", ignore_file_extensior_if_interpreter_set_in_settings)
+    if ignore_file_extensior_if_interpreter_set_in_settings:
+        if "interpreter" in settings.config:
+            return settings.config["interpreter"]
+    
     if f == "":
         return ""
     assert f in settings.config["file_extension"], f"{f} is not a file extension that is present in your config file."
