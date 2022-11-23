@@ -3,6 +3,8 @@ Encap is a simple tool to keep track of computational experiments.
 This program is intended to be used for scientific computing, it makes it easier to run different experiments in different containers and keep track of results.
 
 It currently has support for:
+* Reruning old experiments
+* Tracking git repostories
 * Starting several experiments in parallel
 * Running experiments on SLURM
 * Running experiments locally/remotely through ssh
@@ -54,7 +56,7 @@ and generates three files:
 pip install git+https://github.com/danielalcalde/encap
 ```
 
-## For help with all the options:
+## Help with all the options
 ```bash
 encap -h
 ```
@@ -64,7 +66,7 @@ To rerun a previous experiment you can use encap in rerun mode:
 ```bash
 encap rerun scripts/my_script.py -n test
 ```
-This will without copying the script again, rerun the experiment. This is useful if you want to rerun an experiment with different parameters. You can for example copy the script and change the parameters and then rerun the modified script.
+This will without copying the script again, rerun the experiment. This is useful if you want to rerun an experiment with different parameters. You can for example copy the script, change the parameters and then rerun the modified script.
 
 ## Starting several experiments in parallel
 #### my_script.py
@@ -101,7 +103,7 @@ Example encap invocation that will execute SLURM on 3 nodes and will pass the `E
 ```
 encap run slurm_test.py -n test -sl_nodes 3 -args " -i \$ENCAP_PROCID"
 ```
-Alternatively `ENCAP_PROCID` can be read directly in your script, see for example /examples/test_script_instances.py
+Alternatively `ENCAP_PROCID` can be read directly in your script, see for example /examples/slurm_test.py
 
 The configuration file is located at ~/.encap/config.yml.
 
