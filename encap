@@ -9,7 +9,7 @@ from encap_lib.machines import LocalMachine
 from encap_lib.encap_lib import get_machine, filename_and_file_extension, get_interpreter_from_file_extension, extract_folder_name
 from encap_lib.encap_lib import record_process, remove_process_from_database
 from encap_lib import slurm
-from encap_lib.git_tracker import get_commit_hashes
+import encap_lib.git_tracker as git_tracker
 
 def tail_pull(machine, run_folder_name, pid=None):
     if pid is not None:
@@ -267,7 +267,11 @@ def mode_rerun_file(run_folder_name, local_project_dir, machine, pargs, rerun=Tr
 
     # If any git-tracking is enabled, then we need to save in the config
     if "git-track" in settings.config:
-        settings.config["git-track"] = get_commit_hashes(settings.config["git-track"])
+        settings.config["git-track"] = git_tracker.get_current_commit_hashes(settings.config["git-track"])
+    
+    if "git-track-force" in settings.config:
+        settings.config["git-track-force"] = git_tracker.get_current_commit_hashes(settings.config["git-track-force"], force=True, verbose=settings.debug,
+                                                                                   commit_message=f"{run_folder_name} automatic commit from encap.")
         
     # Save the settings
     settings.write_config_file(os.path.join(run_folder_name, ".encap_history.conf"), settings.config,
@@ -349,7 +353,7 @@ def parse_arguments():
     """))
 
     parser.add_argument("target", help="Name of the file to run.")
-    parser.add_argument("-n", "--name", dest="name", help="Container name.", default=None)
+    parser.add_argument("-n", "--name", dest="name", help="Container name.", required=True, default=None)
     parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default=None)
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
     parser.add_argument("-sn", "--script_name", dest="script_name", help="In case it is run on a folder this specifies the file that should be run. The default behaviour is to search for a file run.*.", default=None)

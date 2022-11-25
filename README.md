@@ -160,6 +160,14 @@ git-track:
 ```
 This will write the commit hash of the current commit in the repository to the .encap_history.conf file in the experiment folder. This can be useful if you want to keep track of the exact commit that was used for a specific experiment in the case that in the future you want to reproduce the results.
 
+## Force commit changes to git (experimental)
+Alternatively, if you often forget to commit your changes before performing a simulation you can use git-track-force. This will create a new branch called encap, sync the current state of your git folder to the encap branch, and lastly commit any changes on the encap branch. This procedure guarantees that you can always go back to the moment in time when you performed the experiment. Note that this procedure uses worktrees to make sure that only the branch encap gets modified.
+```yml
+git-track-force:
+  - <repo_dir_3>
+  - <repo_dir_4>
+```
+
 ## Configuring SSH (untested with newest features)
 The script can be also executed on a remote server through ssh. For this, a mirror of the local folder is created on the remote server.
 
