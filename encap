@@ -9,6 +9,7 @@ from encap_lib.machines import LocalMachine
 from encap_lib.encap_lib import get_machine, filename_and_file_extension, get_interpreter_from_file_extension, extract_folder_name
 from encap_lib.encap_lib import record_process, remove_process_from_database
 from encap_lib import slurm
+from encap_lib.status import get_status, print_status
 import encap_lib.git_tracker as git_tracker
 
 def tail_pull(machine, run_folder_name, pid=None):
@@ -67,6 +68,7 @@ def run(machine, file_extension, args, run_folder_name, target_file, target_file
         
         cd {run_folder_name}
         export ENCAP_PROCID={i}
+        export ENCAP_NAME="{run_folder_name}"
         date &> {log}
         echo "host: $(hostname)" &>> {log}
         {print_instance}
@@ -330,12 +332,13 @@ def parse_arguments():
     rerun: Reruns the target file in the experiment without copying.
     tail: Tails the log file of the experiment.
     copy: Copies the experiment specifeid with -cn into the experiment specified with -n.
+    status: Prints the status of all the experiments runnin on the machine.
     kill: Kills the running experiment. (currently not working)
 
     """))
 
-    parser.add_argument("target", help="Name of the file to run.")
-    parser.add_argument("-n", "--name", dest="name", help="Container name.", required=True, default=None)
+    parser.add_argument("target", nargs="?", help="Name of the file to run.", default=None)
+    parser.add_argument("-n", "--name", dest="name", help="Container name.", default=None)
     parser.add_argument("-cn", "--copy-name", dest="copy_name", help="Container to copy from.", required=False, default=None)
     parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default=None)
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
@@ -374,6 +377,12 @@ def parse_arguments():
     if pargs.dryrun:
         settings.dryrun = True
     
+    if pargs.target is None:
+        assert pargs.mode == "status", "No target specified."
+    
+    if pargs.name is None:
+        assert pargs.mode == "status", "encap: error: the following arguments are required: -n/--name"
+    
     if pargs.mode == "copy":
         assert pargs.copy_name is not None, "You need to specify a container to copy from with -cn."
     else:
@@ -385,9 +394,7 @@ def parse_arguments():
 def main():
 
     pargs = parse_arguments()
-
     local_project_dir = os.getcwd()
-    source_file_path = pargs.target
     localmachine = LocalMachine(local_project_dir)
 
     if pargs.vm is not None:
@@ -395,6 +402,16 @@ def main():
     else:
         machine = localmachine
     
+    # modes not requiring a target
+    if pargs.mode == "status":
+        encap_process_dict = get_status(machine)
+        print_status(encap_process_dict)
+        exit()
+
+
+
+
+    source_file_path = pargs.target
     # Check if it will run in folder mode or file mode
     if os.path.isdir(source_file_path):
         if source_file_path[-1] == "/":
