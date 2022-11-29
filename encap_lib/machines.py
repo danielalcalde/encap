@@ -5,7 +5,7 @@ import encap_lib.encap_settings as settings
 
 class Machine:
     def __init__(self):
-        pass
+        self.sync = False
 
     def write_file(self, name, content, *args, **kwargs):
         command = f"""
