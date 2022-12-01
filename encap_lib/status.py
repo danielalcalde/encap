@@ -15,12 +15,14 @@ def get_status(machine):
     code = ""
     for pid in process_dict:
         code += f"""cat /proc/{pid}/environ
-echo ""
+echo "encap_end"
 """
 
     encap_process_dict = dict()
     envs = machine.run_code(code)[:-1]
-    assert len(envs) == len(process_dict), "Something went wrong."
+    envs = "".join(envs).split("encap_end")
+    assert len(envs) == len(process_dict), f"Something went wrong {len(envs)} != {len(process_dict)}"
+
     for env, pid in zip(envs, process_dict):
         if "ENCAP" in env:
             encap_process_dict[pid] = env
