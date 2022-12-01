@@ -15,7 +15,7 @@ import encap_lib.git_tracker as git_tracker
 def tail_pull(machine, run_folder_name, pid=None):
     if pid is not None:
         machine.run_code(f"tail -f -n +1 --pid={pid} -f {run_folder_name}/log", verbose=True, output=True)
-        machine.run_code(f"rm {run_folder_name}/pid")
+        machine.run_code(f"rm {run_folder_name}/pid -f")
     else:
         # Runs the tail command until it sees the special character
         machine.run_code(f"""#!/bin/bash
@@ -354,7 +354,7 @@ kill: Kills the running experiment. Note that if the flag -i is specified, then 
     parser.add_argument("-sl_partition", "--slurm_partition", dest="sl_partition", help="Partition to run the job in slurm.", default=None)
     parser.add_argument("-sl_account", "--slurm_account", dest="sl_account", help="Account to run the job in slurm.", default=None)
     parser.add_argument("-sl_cpus", "--slurm_cpus-per-task", dest="sl_cpus", help="Number of cpus to run the job in slurm. - cpus-per-task", default=None, type=int)
-    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start. If you use {i} in args it will be replaced by the index number of the slurm instance. Also for each instance apart from the ENCAP_PROCID enviromental variable the ENCAP_SLURM_INSTANCE=<instance_number> will be set. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20)", default=None, type=eval)
+    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start. If you use {i} in args it will be replaced by the index number of the slurm instance. For each instance the ENCAP_PROCID enviromental variable and the ENCAP_SLURM_INSTANCE variable will be set. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20)", default=None, type=eval)
     
     # Other arguments
     parser.add_argument("-y", "--yes",
@@ -479,18 +479,21 @@ def main():
 
         copy_folder_name = os.path.join(folder_name, pargs.copy_name)
         if is_file:
-            copy_file_path = os.path.join(copy_folder_name, script_name)
-            machine.push(copy_file_path, target_file_path, directory=False, verbose=True)
+            file_list = [script_name]
         else:
             # Copy the files named like files from source_file_path from copy_folder_name to run_folder_name
-            for file in os.listdir(source_file_path):
-                copy_file_path = os.path.join(copy_folder_name, file)
-                target_file_path = os.path.join(run_folder_name, file)
-                machine.push(copy_file_path, target_file_path, directory=False, verbose=True)
+            file_list = os.listdir(source_file_path) 
+        
+        if os.path.isfile(os.path.join(copy_folder_name, ".encap.conf")):
+            file_list += [".encap.conf"]
+        
+        for file in file_list:
+            copy_file_path = os.path.join(copy_folder_name, file)
+            target_file_path = os.path.join(run_folder_name, file)
+            machine.push(copy_file_path, target_file_path, directory=False, verbose=True)
 
 
     elif pargs.mode == "kill":
-        # checks if folder exists, if yes take the pid and kill it.
         encap_process_dict = get_status(machine, run_folder_name=run_folder_name, id=pargs.i)
 
         if len(encap_process_dict) == 0:
@@ -512,10 +515,7 @@ def main():
     elif pargs.mode == "push":
         assert pargs.name is not None, "The experiment_name -n must be specified."
         machine.push(run_folder_name, run_folder_name, directory=True, verbose=True)
-
-    elif pargs.mode == "pkill":
-        machine.run_code(f"pkill -f '{pargs.target}' -u {machine.username}", output=True, verbose=True)
-
+    
     else:
         raise ValueError(f"The mode '{pargs.mode}' is not available.")
 
