@@ -190,7 +190,7 @@ def check_if_folder_exists(machine, pargs, folder_name, run_folder_name):
         raise Exception(f"Unexpected value {out}.")
     
 def mode_run_file(folder_name, run_folder_name, source_file_path, local_project_dir, target_file_path, machine, pargs, interpreter_args=""):
-    assert pargs.name is not None, "The container_name -n must be specified."
+    assert pargs.name is not None, "The experiment_name -n must be specified."
 
     #Syncs folders
     machine.sync_files()
@@ -205,7 +205,7 @@ def mode_run_file(folder_name, run_folder_name, source_file_path, local_project_
     mode_rerun_file(run_folder_name=run_folder_name, local_project_dir=local_project_dir, machine=machine, pargs=pargs, rerun=False)
 
 def mode_run_folder(folder_name, run_folder_name, source_file_path, local_project_dir, machine, pargs, interpreter_args=""):
-    assert pargs.name is not None, "The container_name -n must be specified."
+    assert pargs.name is not None, "The experiment_name -n must be specified."
 
     # Syncs folders
     machine.sync_files()
@@ -239,7 +239,7 @@ def mode_run_folder(folder_name, run_folder_name, source_file_path, local_projec
     
 
 def mode_rerun_file(run_folder_name, local_project_dir, machine, pargs, rerun=True, interpreter_args=""):
-    assert pargs.name is not None, "The container_name -n must be specified."
+    assert pargs.name is not None, "The experiment_name -n must be specified."
 
     # Check if the experiment in run_folder_name exists
     assert os.path.isdir(run_folder_name), f"The experiment {run_folder_name} does not exist."
@@ -327,23 +327,23 @@ def parse_arguments():
     import textwrap
 
     parser = ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("mode", help=textwrap.dedent("""The mode of the program. Either run, rerun, tail or kill.
-    run: Copies the target file into the experiment and runs it.
-    rerun: Reruns the target file in the experiment without copying.
-    tail: Tails the log file of the experiment.
-    copy: Copies the experiment specifeid with -cn into the experiment specified with -n.
-    status: Prints the status of all the experiments runnin on the machine.
-    kill: Kills the running experiment. (currently not working)
+    parser.add_argument("mode", help=textwrap.dedent("""The mode of the program. Either run, rerun, tail, copy, status or kill.
+run: Copies the target file into the experiment and runs it.
+rerun: Reruns the target file in the experiment without copying.
+tail: Tails the log file of the experiment.
+copy: Copies the experiment specifeid with -cn into the experiment specified with -n.
+status: Prints the status of all the experiments running on the machine.
+kill: Kills the running experiment. Note that if the flag -i is specified, then only the instance/list of instances specified by -i is killed. Else all instances if -i is not specified.
 
     """))
 
     parser.add_argument("target", nargs="?", help="Name of the file to run.", default=None)
-    parser.add_argument("-n", "--name", dest="name", help="Container name.", default=None)
-    parser.add_argument("-cn", "--copy-name", dest="copy_name", help="Container to copy from.", required=False, default=None)
+    parser.add_argument("-n", "--name", dest="name", help="Experiment name.", default=None)
+    parser.add_argument("-cn", "--copy-name", dest="copy_name", help="Experiment to copy from.", required=False, default=None)
     parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default=None)
     parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
     parser.add_argument("-sn", "--script_name", dest="script_name", help="In case it is run on a folder this specifies the file that should be run. The default behaviour is to search for a file run.*.", default=None)
-    parser.add_argument("-i", "--number_of_instances", dest="i", help="Number of instances to start in parallel. For each instance an enviromental variable ENCAP_PROCID=<instance_number> will be set. You can also pass a list or any python expression as a string. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20). Currently not compatible with slurm.", default=1, type=eval)
+    parser.add_argument("-i", "--number_of_instances", dest="i", help="Number of instances to start in parallel. For each instance an enviromental variable ENCAP_PROCID=<instance_number> will be set. You can also pass a list or any python expression as a string. If you pass a list it will run the instances in that list. Example: -i [0, 2, 3] or range(5, 20). Similar to -sl_i in slurm mode.", default=1, type=eval)
     parser.add_argument("-int", "--interpreter", dest="interpreter", help="The interpreter to use. Default is to infer it from the file extension.", default=None)
 
     # Slurm arguments
@@ -354,12 +354,12 @@ def parse_arguments():
     parser.add_argument("-sl_partition", "--slurm_partition", dest="sl_partition", help="Partition to run the job in slurm.", default=None)
     parser.add_argument("-sl_account", "--slurm_account", dest="sl_account", help="Account to run the job in slurm.", default=None)
     parser.add_argument("-sl_cpus", "--slurm_cpus-per-task", dest="sl_cpus", help="Number of cpus to run the job in slurm. - cpus-per-task", default=None, type=int)
-    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start. If you use {i} in args it will be replaced by the index number of the slurm instance. Also for each instance an enviromental variable ENCAP_SLURM_INSTANCE=<instance_number> will be set. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20)", default=None, type=eval)
+    parser.add_argument("-sl_i", "--slurm_instances", dest="sl_i", help="Number of seperate slurm instances to start. If you use {i} in args it will be replaced by the index number of the slurm instance. Also for each instance apart from the ENCAP_PROCID enviromental variable the ENCAP_SLURM_INSTANCE=<instance_number> will be set. If you pass a list it will run the instances in that list. Example: -sl_i [0, 2, 3] or range(5, 20)", default=None, type=eval)
     
     # Other arguments
     parser.add_argument("-y", "--yes",
                         action="store_true", dest="yes", default=False,
-                        help="All promts will be answerd with yes.")
+                        help="All prompts will be answerd with yes.")
 
     parser.add_argument("-d", "--debug",
                         action="store_true", dest="debug", default=False,
@@ -384,9 +384,9 @@ def parse_arguments():
         assert pargs.mode == "status", "encap: error: the following arguments are required: -n/--name"
     
     if pargs.mode == "copy":
-        assert pargs.copy_name is not None, "You need to specify a container to copy from with -cn."
+        assert pargs.copy_name is not None, "You need to specify a experiment to copy from with -cn."
     else:
-        assert pargs.copy_name is None, "You can only copy from a container in copy mode."
+        assert pargs.copy_name is None, "You can only copy from a experiment in copy mode."
     
     settings.read_terminal_arguments(pargs) 
     return pargs
@@ -407,8 +407,6 @@ def main():
         encap_process_dict = get_status(machine)
         print_status(encap_process_dict)
         exit()
-
-
 
 
     source_file_path = pargs.target
@@ -493,32 +491,26 @@ def main():
 
     elif pargs.mode == "kill":
         # checks if folder exists, if yes take the pid and kill it.
-        print(run_folder_name)
-        code = f"""
-        if [ -f {run_folder_name}/pid ]
-        then
-            cat {run_folder_name}/pid
-        else
-            echo "NoFolder"
-        fi
-        """
-        pid = machine.run_code(code, verbose=False, output=True)[0]
-        assert not pid == "NoFolder", "The PID file was not found."
-        code = f"""
-        kill {pid}
-        rm {run_folder_name}/pid
-        """
+        encap_process_dict = get_status(machine, run_folder_name=run_folder_name, id=pargs.i)
 
-        machine.run_code(code, verbose=True, output=True)
-        print("Killed process:", pid)
-        print("Currently killing is not supported.")
+        if len(encap_process_dict) == 0:
+            print(f"No process {run_folder_name} found.")
+            exit()
+        
+        print("Killing:")
+        print_status(encap_process_dict)
+        code = ""
+
+        for pid in encap_process_dict:
+            code += f"kill {pid}; "
+        machine.run_code(code, verbose=True)
 
     elif pargs.mode == "pull":
-        assert pargs.name is not None, "The container_name -n must be specified."
+        assert pargs.name is not None, "The experiment_name -n must be specified."
         machine.pull(run_folder_name, run_folder_name, directory=True, verbose=True)
 
     elif pargs.mode == "push":
-        assert pargs.name is not None, "The container_name -n must be specified."
+        assert pargs.name is not None, "The experiment_name -n must be specified."
         machine.push(run_folder_name, run_folder_name, directory=True, verbose=True)
 
     elif pargs.mode == "pkill":

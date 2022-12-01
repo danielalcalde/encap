@@ -1,7 +1,8 @@
 from datetime import datetime
 from tabulate import tabulate
+import copy
 
-def get_status(machine):
+def get_status(machine, run_folder_name=None, id=None):
     # List all the running processes that my user has
     porcesses = machine.run_code("ps -o pid,lstart,cmd -u $USER")
     
@@ -51,11 +52,30 @@ echo "encap_end"
         timee_diff = datetime.now() - time
         encap_process_dict[pid]["PID"] = pid
         encap_process_dict[pid]["TIME"] = strfdelta(timee_diff, "{H:02}:{M:02}:{S:02}")
+    
+
+    # Only keep the processes that are running the same run folder
+    if id is not None:
+        if isinstance(id, str):
+            id = [id]
+        elif isinstance(id, int):
+            id = [str(id)]
+        else:
+            id = [str(i) for i in id]
+        
+    if run_folder_name is not None:
+        for pid in list(encap_process_dict):
+            if encap_process_dict[pid]["ENCAP_NAME"] != run_folder_name:
+                del encap_process_dict[pid]
+            else:
+                if id is not None and not (encap_process_dict[pid]["ENCAP_PROCID"] in id):
+                    del encap_process_dict[pid]
 
     return encap_process_dict
 
 def print_status(encap_process_dict):
-        # Improve table
+    encap_process_dict = copy.deepcopy(encap_process_dict)
+    # Improve table
     for pid in encap_process_dict:
         encap_process_dict[pid]["NAME"] = encap_process_dict[pid]["ENCAP_NAME"]
         if encap_process_dict[pid]["ENCAP_PROCID"] != "0":
