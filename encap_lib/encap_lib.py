@@ -163,6 +163,9 @@ def remove_process_from_database(name, i):
         yaml.dump(running, yml_file, default_flow_style=False)
 
 def get_all_processes():
+    """
+    Get all the processes that are currently running.
+    """
     try:
         with open(settings.running_processes_file, 'r') as ymlfile:
             running = yaml.load(ymlfile)

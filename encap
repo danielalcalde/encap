@@ -27,14 +27,17 @@ done < <(tail -f {run_folder_name}/log)
     
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
-# Bash code to run the file and save outputs in log, save PID in the file pid.
+
 def run(machine, file_extension, args, run_folder_name, target_file, target_file_path, interprter_args="", number_of_instances=1):
+    """
+    Run the file and save outputs in log, save PID in the file pid.
+    """
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
     # Get interpreter from file extension
     interpreter = get_interpreter_from_file_extension(file_extension, ignore_file_extensior_if_interpreter_set_in_settings=True)
 
-    # Chech if the files is executable, if yes then run it directly
+    # Check if the files is executable, if yes then run it directly
     is_executable = os.access(target_file_path, os.X_OK)
 
     # Give warning if an interpreter is set in the settings file
@@ -456,13 +459,12 @@ def main():
         
     elif pargs.mode == "tail":
         code = f"cat {run_folder_name}/pid"
-        out = machine.run_code(code, verbose=True, output=True)
+        out = machine.run_code(code, verbose=False, output=True)
         
         assert len(out) == 1, out
-
         if out[0].isdigit():
             pid = out[0]
-            print(pid)
+            print("PID: ", pid)
 
             machine.pull(run_folder_name, run_folder_name, directory=True)
 

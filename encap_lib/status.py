@@ -74,6 +74,10 @@ echo "encap_end"
     return encap_process_dict
 
 def print_status(encap_process_dict):
+    if len(encap_process_dict) == 0:
+        print("No encap processes are running on this machine.")
+        return
+    
     encap_process_dict = copy.deepcopy(encap_process_dict)
     # Improve table
     for pid in encap_process_dict:
