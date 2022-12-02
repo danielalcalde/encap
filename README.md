@@ -7,7 +7,7 @@ It currently has support for:
 * Tracking git repositories
 * Starting several experiments in parallel
 * Running experiments on Slurm
-* Running experiments locally/remotely through ssh
+* Running experiments remotely through ssh
 
 If one wants to execute a script instead of writing:
 ```bash
