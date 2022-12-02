@@ -168,4 +168,17 @@ def read_slurm_settings_from_yml(file_name, slurm_settings=None):
         pass
     
     return slurm_settings
+
+def print_slurm_status_if_using_slurm(machine):
+    #squeue --me  --sort=+j --format="%.10i %.9P %.90j %.9u %.3t %.6M %.6D %R"
+
+    # Check if sqeue is installed
+    out = machine.run_code("which squeue")
+    if out == "":
+        return None
     
+    # Get the slurm status
+    out = machine.run_code("squeue --me  --sort=+j --format=\"%.10i %.9P %.90j %.9u %.3t %.6M %.6D %R\"")
+    if len(out) > 1:
+        for o in out:
+            print(o)

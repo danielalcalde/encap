@@ -409,6 +409,8 @@ def main():
     if pargs.mode == "status":
         encap_process_dict = get_status(machine)
         print_status(encap_process_dict)
+
+        slurm.print_slurm_status_if_using_slurm(machine)
         exit()
 
 
