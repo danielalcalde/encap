@@ -34,7 +34,8 @@ echo "encap_end"
         env_dict = dict()
         for env_i in env:
             if "ENCAP" in env_i:
-                env_name, env_varaible = env_i.split("=")
+                split = env_i.split("=")
+                env_name, env_varaible = split[0], "=".join(split[1:])
                 env_dict[env_name] = env_varaible
         encap_process_dict[pid] = env_dict
     
