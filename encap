@@ -125,6 +125,7 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
 
         # Script to run the file and save outputs in log
         code, args_replace = slurm.generate_slurm_executable(file_extension, run_folder_name, target_file_path, args, target_file=target_file, slurm_instance=i, ntpn=slurm_settings["ntasks-per-node"])
+        
         # Save the script in the run_folder
         machine.write_file(executable_file_name, code, verbose=True)
 
@@ -144,6 +145,11 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
 
         # Write the slurm file
         machine.write_file(runslurm_file_name, code, verbose=True)
+
+        # Delete previous log file and create a new one if it is the first instance
+        if i == 0:
+            machine.run_code(f"""rm {run_folder_name}/log -f
+                                 touch {run_folder_name}/log""")
 
         # Run the slurm file
         machine.run_code(f"sbatch {runslurm_file_name}", verbose=True)

@@ -83,8 +83,8 @@ def generate_slurm_executable(file_extension, run_folder_name, target_file_path,
     else
         log="log_$ENCAP_PROCID"
     fi
-
     echo $log
+
     echo "Slurm Job Id: $SLURM_JOB_ID" &> $log
     date &>> $log
     echo "host: $(hostname)" &>> $log
@@ -178,7 +178,7 @@ def print_slurm_status_if_using_slurm(machine):
         return None
     
     # Get the slurm status
-    out = machine.run_code("squeue --me  --sort=+j --format=\"%.10i %.9P %.90j %.9u %.3t %.6M %.6D %R\"")
+    out = machine.run_code("squeue --me  --sort=+j --format=\"%.10i %.9P %.90j %.3t %.6M %.6D %R\"")
     if len(out) > 1:
         for o in out:
             print(o)

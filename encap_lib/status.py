@@ -75,7 +75,7 @@ echo "encap_end"
 
 def print_status(encap_process_dict):
     if len(encap_process_dict) == 0:
-        print("No encap processes are running on this machine.")
+        print("No encap experiments are running on this machine.")
         return
     
     encap_process_dict = copy.deepcopy(encap_process_dict)
