@@ -502,7 +502,10 @@ def main():
             target_file_path = os.path.join(run_folder_name, file)
             machine.push(copy_file_path, target_file_path, directory=False, verbose=True)
         
-        print(f"To run the experiment, run:\nencap rerun {pargs.target} -n {pargs.name}")
+        if settings.debug : print(f"Files copied from {copy_folder_name} to {run_folder_name}")
+
+        print(f"""You can run the copied experiment with:
+encap rerun {pargs.target} -n {pargs.name}""")
 
 
     elif pargs.mode == "kill":
