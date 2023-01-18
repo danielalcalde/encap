@@ -66,7 +66,7 @@ To rerun a previous experiment you can use encap in rerun mode:
 ```bash
 encap rerun scripts/my_script.py -n test
 ```
-This will rerun the experiment without copying the script again. This is useful if you want to re-run an experiment with different parameters. For example, you can copy the script, change the parameters and then rerun the modified script.
+This will rerun the experiment without copying the script again. This is useful if you want to re-run an old experiment with different parameters. For example, you can copy the script, change the parameters and then rerun the modified script.
 
 ## Starting several experiments in parallel
 #### my_script.py
