@@ -25,6 +25,16 @@ class Machine:
     def sync_files(self):
         pass
 
+    def exists(self, name):
+        code = f"""
+        if [ -e "{name}" ]; then
+            echo "True"
+        else
+            echo "False"
+        fi
+        """
+        return self.run_code(code)[0] == "True"
+
 class SSHMachine(Machine):
 
     def __init__(self, ip, username, local_project_dir, remote_project_dir, ssh_options="",

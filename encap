@@ -167,7 +167,7 @@ def get_script_name(run_folder_name, script_name):
     
     return script_name
 
-def check_if_folder_exists(machine, pargs, folder_name, run_folder_name):
+def create_folder_and_check_if_experiment_exists(machine, pargs, folder_name, run_folder_name):
     """
     Creates folder if it does not exist and checks if the caspsule already exists.
     """
@@ -205,7 +205,7 @@ def mode_run_file(folder_name, run_folder_name, source_file_path, local_project_
     machine.sync_files()
 
     # Creates folder if it does not exist and checks if the caspsule already exists.
-    check_if_folder_exists(machine, pargs, folder_name, run_folder_name)
+    create_folder_and_check_if_experiment_exists(machine, pargs, folder_name, run_folder_name)
 
     # Copy the local copy of pargs.target to the run_folder
     machine.push(source_file_path, target_file_path, directory=False, verbose=True)
@@ -220,7 +220,7 @@ def mode_run_folder(folder_name, run_folder_name, source_file_path, local_projec
     machine.sync_files()
 
     # Creates folder if it does not exist and checks if the caspsule already exists.
-    check_if_folder_exists(machine, pargs, folder_name, run_folder_name)
+    create_folder_and_check_if_experiment_exists(machine, pargs, folder_name, run_folder_name)
     
 
     # Copy the local version of pargs.target to the run_folder
@@ -485,9 +485,13 @@ def main():
                 machine.run_code(f"cat {run_folder_name}/log", verbose=True, output=True)
 
     elif pargs.mode == "copy":
-        check_if_folder_exists(machine, pargs, folder_name, run_folder_name)
-
         copy_folder_name = os.path.join(folder_name, pargs.copy_name)
+        if not machine.exists(copy_folder_name):
+            print(f"encap error: {copy_folder_name} does not exist.")
+            exit()
+        
+        create_folder_and_check_if_experiment_exists(machine, pargs, folder_name, run_folder_name)
+        
         if is_file:
             file_list = [script_name]
         else:
