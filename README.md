@@ -1,15 +1,15 @@
 # encap (encapsulate)
-Encap is a simple tool to keep track of computational experiments.
-This program is intended to be used for scientific computing, it makes it easier to run different experiments in different containers and keep track of results.
+Encap is a simple tool to help you keep track of your computational experiments.
+Designed for scientific computing, it makes it easy to run different experiments in different containers and keep track of the results.
 
 It currently has support for:
-* Rerunning old experiments
+* Re-running old experiments
 * Tracking git repositories
-* Starting several experiments in parallel
+* Running multiple experiments in parallel
 * Running experiments on Slurm
-* Running experiments remotely through ssh
+* Running experiments remotely via ssh
 
-If one wants to execute a script instead of writing:
+If you want to run a script instead of typing:
 ```bash
 python scripts/my_script.py
 ```
@@ -22,7 +22,7 @@ Then the script will be executed with
 ```
 setsid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
 ```
-The log file will be tailed afterward. This makes it easy to keep track of different computational experiments. In python an example could be the following:
+While the experiment is running, the log file is printed to the terminal. This makes it easy and convenient to keep track of different computing experiments. In Python, an example might look like this:
 
 #### my_script.py
 ```python
@@ -38,7 +38,7 @@ Running:
 encap run scripts/my_script.py -n test
 ```
 
-gives the output:
+will give the output:
 ```
 PID 23968
 Sat Sep 14 01:03:28 CEST 2019
@@ -66,7 +66,7 @@ To rerun a previous experiment you can use encap in rerun mode:
 ```bash
 encap rerun scripts/my_script.py -n test
 ```
-This will without copying the script again, rerun the experiment. This is useful if you want to rerun an experiment with different parameters. You can for example copy the script, change the parameters and then rerun the modified script.
+This will rerun the experiment without copying the script again. This is useful if you want to re-run an experiment with different parameters. For example, you can copy the script, change the parameters and then rerun the modified script.
 
 ## Starting several experiments in parallel
 #### my_script.py
