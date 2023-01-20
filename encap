@@ -12,17 +12,18 @@ from encap_lib import slurm
 from encap_lib.status import get_status, print_status
 import encap_lib.git_tracker as git_tracker
 
-def tail_pull(machine, run_folder_name, pid=None):
+def tail_pull(machine, run_folder_name, pid=None, log_file_name="log"):
     if pid is not None:
-        machine.run_code(f"tail -f -n +1 --pid={pid} -f {run_folder_name}/log", verbose=True, output=True)
+        machine.run_code(f"touch {run_folder_name}/{log_file_name}; tail -f -n +1 --pid={pid} -f {run_folder_name}/{log_file_name}", verbose=True, output=True)
         machine.run_code(f"rm {run_folder_name}/pid -f")
     else:
         # Runs the tail command until it sees the special character
         machine.run_code(f"""#!/bin/bash
+touch {run_folder_name}/{log_file_name}
 while IFS= read -r LOGLINE || [[ -n "$LOGLINE" ]]; do
     [[ "${{LOGLINE}}" == "{chr(4)}" ]] && exit 0
     printf '%s\\n' "$LOGLINE"
-done < <(tail -f {run_folder_name}/log)
+done < <(tail -f {run_folder_name}/{log_file_name})
 """, verbose=True, output=True)
     
     machine.pull(run_folder_name, run_folder_name, directory=True)
@@ -49,6 +50,7 @@ def run(machine, file_extension, args, run_folder_name, target_file, target_file
     else:
         iterator = number_of_instances
 
+    log_file_names = []
     pids = []
     for i in iterator:
 
@@ -92,8 +94,9 @@ def run(machine, file_extension, args, run_folder_name, target_file, target_file
             pid = machine.run_code(code, output=True)[0]
         
         pids.append(pid)
+        log_file_names.append(log)
 
-    return pids[0]
+    return pids[0], log_file_names[0]
 
 def run_slurm(machine, file_extension, target, args, run_folder_name, target_file, target_file_path, slurm_settings, interpreter_args="", name=None):
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
@@ -111,7 +114,8 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
         iterator = range(slurm_settings["i"])
     else:
         iterator = slurm_settings["i"]
-
+    
+    log_file_name = ""
     # Create the slurm script for all slurm instances
     for i in iterator:
         if i == 0:
@@ -119,9 +123,15 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
         else:
             slurm_instance_text = f"_{i}"
         
+        if log_file_name == "":
+            log_file_name = f"log{slurm_instance_text}"
+            # Delete previous log file and create a new one if it is the first instance
+            machine.run_code(f"""rm {run_folder_name}/{log_file_name} -f
+                                 touch {run_folder_name}/{log_file_name }""")
+        
         runslurm_file_name = f"{run_folder_name}/slurm_files/run{slurm_instance_text}.slurm"
         executable_file_name = f"{run_folder_name}/slurm_files/run{slurm_instance_text}.sh"
-        log_file_name = f"{run_folder_name}/slurm_files/log{slurm_instance_text}.slurm"
+        log_file_name_slurm = f"{run_folder_name}/slurm_files/log{slurm_instance_text}.slurm"
 
         # Script to run the file and save outputs in log
         code, args_replace = slurm.generate_slurm_executable(file_extension, run_folder_name, target_file_path, args, target_file=target_file, slurm_instance=i, ntpn=slurm_settings["ntasks-per-node"])
@@ -141,18 +151,14 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
             job_name = f"{job_name}_{args_}"
         
         # Generate the slurm settings script
-        code = slurm.generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_file_name, executable_file_name, log_file_name, job_name=job_name)
+        code = slurm.generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_file_name, executable_file_name, log_file_name_slurm, job_name=job_name)
 
         # Write the slurm file
         machine.write_file(runslurm_file_name, code, verbose=True)
 
-        # Delete previous log file and create a new one if it is the first instance
-        if i == 0:
-            machine.run_code(f"""rm {run_folder_name}/log -f
-                                 touch {run_folder_name}/log""")
-
         # Run the slurm file
         machine.run_code(f"sbatch {runslurm_file_name}", verbose=True)
+    return log_file_name
 
 def get_script_name(run_folder_name, script_name):
     
@@ -313,20 +319,21 @@ def mode_rerun_file(run_folder_name, local_project_dir, machine, pargs, rerun=Tr
         else:
             number_of_instances = 1
         
-        pid = run(machine, file_extension, args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, number_of_instances=number_of_instances)
+        pid, log_file_name = run(machine, file_extension, args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, number_of_instances=number_of_instances)
+    
     else:
 
         # Load the slurm settings from the loaded config file
         slurm_settings = slurm.read_slurm_settings_from_encapconfig(pargs.vm, local_project_dir)
         
         # Run the SLURM job with the slurm config file
-        run_slurm(machine, file_extension, pargs.target, args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, slurm_settings=slurm_settings, name=pargs.name)
+        log_file_name = run_slurm(machine, file_extension, pargs.target, args, run_folder_name=run_folder_name, target_file=target_file, target_file_path=target_file_path, slurm_settings=slurm_settings, name=pargs.name)
 
     machine.pull(run_folder_name, run_folder_name, directory=True)
 
     # Record active process
     record_process(pargs.vm, pargs.target, pargs.name)
-    tail_pull(machine, run_folder_name, pid)
+    tail_pull(machine, run_folder_name, pid, log_file_name = log_file_name)
     remove_process_from_database(pargs.target, pargs.name)
 
 
