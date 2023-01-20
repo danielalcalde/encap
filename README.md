@@ -126,12 +126,12 @@ file_extension:
 slurm:
   account: <account>
   partition: <partition>
-  cpus-per-task: 256
-  ntasks-per-node: 1
-  time: "24:00:00"
-  code:
+  cpus-per-task: 256 # How many cpus to allocate to each of your experiments
+  ntasks-per-node: 1 # How many copies of your experiment to start per node
+  time: "24:00:00" # Time until your job is terminated by slurm
+  code: # Optional
     - timeout 23h srun bash {run.sh}
-    - if [[ $? -eq 124 ]]; then
+    - if [[ $? -eq 124 ]]; then # Warning: this will rerun your code if it did not finish sucessfully after 23h
     - sbatch {run.slurm}
     - fi
 ```
