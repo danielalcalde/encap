@@ -112,11 +112,15 @@ encap run my_script.go -n <version> --interpreter "go run"
 ```
 
 ## Configuring Slurm
-Example encap invocation that will execute Slurm on 3 nodes and will pass the `ENCAP_PROCID` environment variable to the script as the -i argument. In this example, the `ENCAP_PROCID` will take the values 0, 1, 2 depending on the node.
+Encap can also be used with Slurm. After writing your configuration file you can run your experiment using slurm by running:
 ```
-encap run slurm_test.py -n test -sl_nodes 3 -args " -i \$ENCAP_PROCID"
+encap run slurm_test.py -n test -sl
 ```
-Alternatively `ENCAP_PROCID` can be read directly in your script, see for example /examples/slurm_test.py
+If you for example want to run 3 experiments in parallel you can do so with:
+```
+encap run slurm_test.py -n test -sl_i 3
+```
+this will launch 3 different slurm jobs and will pass the `ENCAP_PROCID` environment variable to the script. In this example, the `ENCAP_PROCID` will take the values 0, 1, 2 depending on the node. See for example /examples/slurm_test.py
 
 The configuration file is located at ~/.encap/config.yml.
 
