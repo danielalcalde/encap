@@ -228,14 +228,19 @@ def run_code_local(command, output=True, verbose=False, wait=True, debug=False, 
         return p.pid
 
     if output:
-        lines = []
-        #for line in p.stdout.readlines():
-        for line in p.stdout:
-            lll = line.decode("utf-8")[:-1]
-            if not should_it_be_ignored(lll, ignore):
-                if verbose: print(lll)
-                lines.append(lll)
-        retval = p.wait()
+        try:
+            lines = []
+            #for line in p.stdout.readlines():
+            for line in p.stdout:
+                lll = line.decode("utf-8")[:-1]
+                if not should_it_be_ignored(lll, ignore):
+                    if verbose: print(lll)
+                    lines.append(lll)
+            retval = p.wait()
+        except KeyboardInterrupt:
+            p.kill()
+            exit()
+        
         return lines
 
     else:
