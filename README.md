@@ -24,7 +24,7 @@ Then the script will be executed with
 ```
 setsid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
 ```
-While the experiment is running, the log file is printed to the terminal. This makes it easy and convenient to keep track of different computing experiments. In Python, an example might look like this:
+While the experiment is running, the log file is printed to the terminal. This makes it easy and convenient to keep track of different computing experiments. In Python, an simple example experiment might look like this:
 
 #### my_script.py
 ```python
