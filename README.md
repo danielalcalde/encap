@@ -9,6 +9,8 @@ It currently has support for:
 * Running experiments on Slurm
 * Running experiments remotely via ssh
 
+Note that it is currently incompatible with macOS.
+
 If you want to run a script instead of typing:
 ```bash
 python scripts/my_script.py
