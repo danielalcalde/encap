@@ -106,7 +106,9 @@ There are 3 ways to choose with which interpreter your file will be executed. Th
 file_extension:
   go: go run
 ```
-The second option is to make your script executable, this will directly execute it. Lastly, you can define the interpreter directly in the command line:
+The second option is to make your script executable, this will directly execute it.
+
+Lastly, you can pass your desired interpreter as a command line argument:
 ```sh
 encap run my_script.go -n <version> --interpreter "go run"
 ```
@@ -122,7 +124,7 @@ encap run slurm_test.py -n test -sl_i 3
 ```
 this will launch 3 different slurm jobs and will pass the `ENCAP_PROCID` environment variable to the script. In this example, the `ENCAP_PROCID` will take the values 0, 1, 2 depending on the node. See for example /examples/slurm_test.py
 
-The configuration file is located at ~/.encap/config.yml.
+The configuration file is located at `~/.encap/config.yml`.
 
 Example config file that will restart the Slurm job if it did not exit successfully:
 ```yml
@@ -147,7 +149,7 @@ slurm:
 If you want to execute different Slurm instances in parallel you can use the `-sl_i <i>` argument. This will create *i* different Slurm jobs.
 
 ## Nesting configuration files
-Sometimes you want to have different configuration files for different projects or even different experiments. Encap will recursively search for files called .encap.conf in the directory, the script is located in and in all parent directories. Each .encap.conf file will be merged with the previous one. This allows you to have a global configuration file and then overwrite only parts of it for specific projects or experiments. For example, you could have a global configuration file that sets the default Slurm partition to "gpu" and then overwrite it for a specific project that does not need a GPU. See the examples/slurm_folder_script_extra_configs folder for more examples.
+Sometimes you want to have different configuration files for different projects or even different experiments. Encap will recursively search for files called .encap.conf in the directory, the script is located in and in all parent directories. Each `.encap.conf` file will be merged with the previous one. This allows you to have a global configuration file and then overwrite only parts of it for specific projects or experiments. For example, you could have a global configuration file that sets the default Slurm partition to "gpu" and then overwrite it for a specific project that does not need a GPU. See the `examples/slurm_folder_script_extra_configs` folder for more examples.
 
 ## Folder mode
 If you want to run a script that depends on other files in the same folder you can use the folder mode. This will copy the entire folder to the experiment folder and then execute the script. This is useful for example if you have a custom .encap.conf file in the folder that you want to use for the experiment or if your script needs to execute other scripts in the same folder. The folder mode is automatically activated if instead of a script you pass a folder to encap. For example:
