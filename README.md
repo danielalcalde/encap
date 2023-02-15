@@ -1,4 +1,6 @@
-# encap (encapsulate)
+<p align="center">
+<img src="https://user-images.githubusercontent.com/53435922/217352989-c400e86c-31e0-40cb-a734-004e5994dda8.svg" width="200"/>
+</p>
 Encap is a simple tool to help you keep track of your computational experiments.
 Designed for scientific computing, it makes it easy to run different experiments in different containers and keep track of the results.
 
