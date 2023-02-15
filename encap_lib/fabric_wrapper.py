@@ -7,13 +7,21 @@ from argparse import ArgumentParser
 import secrets
 
 from fabric import Connection
+import paramiko
 
 class SSHMachine:
     def __init__(self, host):
 
         self.host = host
-        self.conn = Connection(self.host)
-        self.conn.open()
+        try:
+            self.conn = Connection(self.host)
+            self.conn.open()
+        except paramiko.ssh_exception.ChannelException as e:
+            print("Error:", e, "for host:", self.host)
+            self.conn = None
+            self.client = None
+            return
+
         self.client = self.conn.client 
     
     def get_host(self):

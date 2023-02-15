@@ -54,7 +54,7 @@ def get_status(vms):
     machines = pool.map(fabric_wrapper.SSHMachine, vms)
     
     code =""" python -c "import psutil; print(max(psutil.cpu_percent(interval=10, percpu=True)))" """
-    procs = [machine.run_code(code, wait=False) for machine in machines]
+    procs = [machine.run_code(code, wait=False) for machine in machines if machine.conn is not None]
     
     return [fabric_wrapper.follow_output(proc, verbose=False)[0] for proc in procs]
 
