@@ -23,23 +23,26 @@ def generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_fil
     
     if job_name is None:
         job_name = f"{run_folder_name}"
-    
+    env_variables = ""
+    bash_code = ""
+
     # Generate the slurm file
-    code = f"""#!/bin/bash
-#SBATCH --job-name={job_name}
+    env_variables += f"""#SBATCH --job-name={job_name}
 #SBATCH --output={log_file_name}
 #SBATCH --error={log_file_name}\n"""
     exceptions = ["code", "i"]
 
     for key, value in slurm_settings.items():
         if not key in exceptions:
-            code += f'#SBATCH --{key}={value}\n'
+            env_variables += f'#SBATCH --{key}={value}\n'
+            if key.lower() == "cpus-per-task":
+                bash_code += "export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK\n"
     
     if not ("time" in slurm_settings):
         assert False, "No time specified in slurm settings."
     
     if slurm_settings.get("code") is None:
-        code += f"srun bash {executable_file_name}"
+        bash_code += f"srun bash {executable_file_name}"
     else:
         c = slurm_settings.get("code")
         
@@ -49,7 +52,12 @@ def generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_fil
         c = c.replace("{run_folder_name}", run_folder_name)
         c = c.replace("{run.slurm}", runslurm_file_name)
         c = c.replace("{run.sh}", executable_file_name)
-        code += c
+        bash_code += c
+    
+    code = f"""#!/bin/bash
+{env_variables}
+{bash_code}
+"""
 
     return code
 
