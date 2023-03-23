@@ -1,32 +1,41 @@
+# Encap: A Simple Tool for Managing Computational Experiments
 <p align="center">
 <img src="https://user-images.githubusercontent.com/53435922/217352989-c400e86c-31e0-40cb-a734-004e5994dda8.svg" width="200"/>
 </p>
-Encap is a simple tool to help you keep track of your computational experiments.
-Designed for scientific computing, it makes it easy to run different experiments in different containers and keep track of the results.
 
-It currently has support for:
+Encap is a user-friendly tool designed to help you manage and keep track of your computational experiments, especially in the field of scientific computing. With Encap, you can easily run various experiments in separate containers and maintain a record of the results.
+
+## Features
+
+Encap currently supports:
+
 * Re-running old experiments
 * Tracking git repositories
 * Running multiple experiments in parallel
 * Running experiments on Slurm
-* Running experiments remotely via ssh
+* Running experiments remotely via SSH
 
-Note that it is currently incompatible with macOS.
+Please note that Encap is currently incompatible with macOS/Windows.
 
-If you want to run a script instead of typing:
+## Running a Script with Encap
+
+Instead of running a script using the standard command:
 ```bash
 python scripts/my_script.py
 ```
-with encap you would write:
+You can run it with Encap by typing:
 ```
 encap run scripts/my_script.py -n <version_name>
 ```
-this will create a folder scripts/my_script/<version_name> and copy the script inside.
-Then the script will be executed with
+This command creates a folder named `scripts/my_script/<version_name>` and copies the script inside. The script is then automatically executed using the following command:
 ```
 setsid nohup time python scripts/my_script/<version_name>/my_script.py &>> scripts/my_script/<version_name>/log & disown
 ```
-While the experiment is running, the log file is printed to the terminal. This makes it easy and convenient to keep track of different computing experiments. In Python, an simple example experiment might look like this:
+As the experiment runs, the log file is displayed in the terminal, making it easy and convenient to monitor different computing experiments.
+
+### Python Example
+
+Consider the following simple Python experiment:
 
 #### my_script.py
 ```python
@@ -35,14 +44,17 @@ import pickle
 save_name = "test_data.p"
 print(save_name)
 
-pickle.dump(["Some", "test", "data"], open(save_name, "wb"))
+# Generate some data
+data = ["Some", "test", "data"]
+
+# Save the data
+pickle.dump(data, open(save_name, "wb"))
 ```
-Running:
+By running:
 ```
 encap run scripts/my_script.py -n test
 ```
-
-will give the output:
+You'll get the output:
 ```
 PID 23968
 Sat Sep 14 01:03:28 CEST 2019
@@ -50,29 +62,32 @@ scripts/test/my_script.py
 
 test_data.p
 ```
-and generates three files:
+And the following three files will be generated:
 * my_script/test/log
 * my_script/test/my_script.py
 * my_script/test/test_data.p
 
 ## Installation
+To install Encap, use the following command:
 ```bash
 pip install git+https://github.com/danielalcalde/encap
 ```
 
-## Help with all the options
+## Accessing Help
 ```bash
 encap -h
 ```
 
-## Rerunning a previous experiment
-To rerun a previous experiment you can use encap in rerun mode:
+## Re-running a Previous Experiment
+
+To re-run a previous experiment, use Encap in rerun mode:
 ```bash
 encap rerun scripts/my_script.py -n test
 ```
-This will rerun the experiment without copying the script again. This is useful if you want to re-run an old experiment with different parameters. For example, you can copy the script, change the parameters and then rerun the modified script.
+This command re-runs the experiment without copying the script again. This is useful if you want to re-run an old experiment with different parameters. For instance, you can copy the script (using the copy command), modify the parameters, and then rerun the updated script.
 
-## Starting several experiments in parallel
+## Running Multiple Experiments in Parallel
+
 #### my_script.py
 ```python
 import pickle
@@ -85,11 +100,11 @@ print("This is the", i, "encap instance")
 
 pickle.dump(["Some", "test", "data", i], open(save_name, "wb"))
 ```
-
+To run the script three times in parallel, use the following command:
 ```bash
 encap run scripts/my_script.py -i 3 -n test
 ```
-will run the script three times in parallel. It will create the files:
+This command generates the following files:
 * my_script/test/my_script.py
 * my_script/test/log
 * my_script/test/log_1
@@ -102,33 +117,43 @@ will run the script three times in parallel. It will create the files:
 ## More Examples
 Several examples can be found in the examples folder.
 
-## Choose a script interpreter
-There are 3 ways to choose with which interpreter your file will be executed. The first one is to set a custom file extension in the configuration file:
+You can find more examples in the `examples` folder.
+
+## Choosing a Script Interpreter
+
+There are three ways to choose the interpreter for executing your script:
+
+1. Set a custom file extension in the configuration file located in `~/.encap/config.yml` (see Sec. Nested Configurations)
 ```yml
 file_extension:
   go: go run
 ```
-The second option is to make your script executable, this will directly execute it.
-
-Lastly, you can pass your desired interpreter as a command line argument:
+2. Make your script executable, which will execute it directly.
+3. Pass your desired interpreter as a command-line argument:
 ```sh
 encap run my_script.go -n <version> --interpreter "go run"
 ```
 
 ## Configuring Slurm
-Encap can also be used with Slurm. After writing your configuration file you can run your experiment using slurm by running:
+
+Encap can also work with Slurm. To run your experiment using Slurm, execute the following command:
 ```
 encap run slurm_test.py -n test -sl
 ```
-If you for example want to run 3 experiments in parallel you can do so with:
+If you want to run three experiments in parallel, use this command:
 ```
 encap run slurm_test.py -n test -sl_i 3
 ```
-this will launch 3 different slurm jobs and will pass the `ENCAP_PROCID` environment variable to the script. In this example, the `ENCAP_PROCID` will take the values 0, 1, 2 depending on the node. See for example /examples/slurm_test.py
+This command launches three different Slurm jobs and passes the `ENCAP_PROCID` environment variable to the script. In this example, the `ENCAP_PROCID` will take the values 0, 1, 2 if ntasks-per-node has been configured to be one. If you run:
+```sh
+encap run slurm_test.py -n test -sl_i 3 -sl_ntasks 20
+```
+60 jobs will be launched in total, and the `ENCAP_PROCID` will take the values 0-59 respectively.
+See `/examples/slurm_test.py` for more details.
 
 The configuration file is located at `~/.encap/config.yml`.
 
-Example config file that will restart the Slurm job if it did not exit successfully:
+Example config file for restarting a Slurm job if it did not exit successfully:
 ```yml
 file_extension:
   py: python -u
@@ -136,74 +161,83 @@ file_extension:
 slurm:
   account: <account>
   partition: <partition>
-  cpus-per-task: 256 # How many cpus to allocate to each of your experiments
+  cpus-per-task: 256 # How many CPUs to allocate to each of your experiments
   ntasks-per-node: 1 # How many copies of your experiment to start per node
-  time: "24:00:00" # Time until your job is terminated by slurm
+  time: "24:00:00" # Time until your job is terminated by Slurm
   code: # Optional
     - timeout 23h srun bash {run.sh}
-    - if [[ $? -eq 124 ]]; then # Warning: this will rerun your code if it did not finish sucessfully after 23h
+    - if [[ $? -eq 124 ]]; then # Warning: this will rerun your code if it did not finish successfully after 23h
     - sbatch {run.slurm}
     - fi
 ```
 
-{run.sh} and {run.slurm} will be replaced with the actual script and Slurm file automatically upon execution.
+In this example, `{run.sh}` and `{run.slurm}` will be replaced with the actual script and Slurm file automatically upon execution.
 
-If you want to execute different Slurm instances in parallel you can use the `-sl_i <i>` argument. This will create *i* different Slurm jobs.
+If you want to execute different Slurm instances in parallel, use the `-sl_i <i>` argument. This will create *i* different Slurm jobs.
 
-## Nesting configuration files
-Sometimes you want to have different configuration files for different projects or even different experiments. Encap will recursively search for files called .encap.conf in the directory, the script is located in and in all parent directories. Each `.encap.conf` file will be merged with the previous one. This allows you to have a global configuration file and then overwrite only parts of it for specific projects or experiments. For example, you could have a global configuration file that sets the default Slurm partition to "gpu" and then overwrite it for a specific project that does not need a GPU. See the `examples/slurm_folder_script_extra_configs` folder for more examples.
+## Nesting Configuration Files
 
-## Folder mode
-If you want to run a script that depends on other files in the same folder you can use the folder mode. This will copy the entire folder to the experiment folder and then execute the script. This is useful for example if you have a custom .encap.conf file in the folder that you want to use for the experiment or if your script needs to execute other scripts in the same folder. The folder mode is automatically activated if instead of a script you pass a folder to encap. For example:
+Sometimes you may want to have different configuration files for different projects or even different experiments. Encap will recursively search for files named `.encap.conf` in the script's directory and all parent directories. Each `.encap.conf` file will be merged with the previous one, allowing you to have a global configuration file and overwrite only parts of it for specific projects or experiments. For example, you can set the default Slurm partition to "gpu" in a global configuration file and overwrite it for a specific project that doesn't require a GPU. See the `examples/slurm_folder_script_extra_configs` folder for more examples.
+
+## Folder Mode
+
+If you need to run a script that relies on other files within the same folder, you can use the folder mode. This mode duplicates the entire folder into the experiment folder and then runs the main script. This is particularly helpful if you have a custom .encap.conf file in the folder that you want to use for the experiment or if your script depends on a configuration file located in the same folder. The folder mode is automatically activated if you provide a folder instead of a script to Encap. For example:
 ```bash
 encap run examples/folder_script -n test
 ```
-this will copy the entire folder to the experiment folder and then execute the script called run.* in the folder.
-Note that the script name can be different from run.* if it is specified with the -f argument or if the folder contains a .encap.conf file with the field script_name set to the name of the script.
+This command will copy the entire folder to the experiment folder and then execute the script called `run.*` in the folder.
 
-## Follow git
-If you want to keep track of the commit in a git repository you can add the following to your .encap.conf file:
+Note that the script name can be different from `run.*` if it is specified with the `-f` argument, or if the folder contains a `.encap.conf` file with the `script_name` field set to the name of the script.
+
+## Tracking Git Repositories
+
+If you want to keep track of the commit in a git repository, add the following to your `.encap.conf` file:
 ```yml
 git-track:
   - <repo_dir_1>
   - <repo_dir_2>
 ```
-This will write the commit hash of the current commit in the repository to the .encap_history.conf file in the experiment folder. This can be useful if you want to keep track of the exact commit that was used for a specific experiment in the case that in the future you want to reproduce the results.
+This configuration will write the commit hash of the current commit in the repository to the `.encap_history.conf` file in the experiment folder. This can be helpful if you want to keep track of the exact commit used for a specific experiment, in case you need to reproduce the results in the future.
 
-## Force commit changes to git (experimental)
-Alternatively, if you forget to commit your changes before performing a simulation often, you can use git-track-force. This will create a new branch called encap. The encap branch will always be automatically kept up to date with the current state of your git project. This is done by committing any changes on the encap branch and saving the hash of this commit in your experiment folder. This procedure guarantees that you can always go back to the moment in time when you performed the experiment. Note that this procedure uses worktrees to make sure that your main branch stays untouched.
+## Force Commit Changes to Git (experimental)
+
+If you often forget to commit your changes before performing a simulation, you can use `git-track-force`. This feature creates a new branch called `encap`. The `encap` branch is always automatically kept up to date with the current state of your git project. This is done by committing any changes on the `encap` branch and saving the hash of this commit in your experiment folder. This process ensures that you can always go back to the moment in time when you performed the experiment. Note that this procedure uses worktrees to ensure that your main branch remains untouched.
 ```yml
 git-track-force: <repo_dir_3>
 ```
 
 ## Configuring SSH (untested with newest features)
-The script can be also executed on a remote server through ssh. For this, a mirror of the local folder is created on the remote server.
+
+You can execute scripts on a remote server through SSH. To do this, a mirror of the local folder is created on the remote server.
 
 ```bash
-encap run scripts/my_script.py -name <version_name> -vm <machine name>
+encap run scripts/my_script.py -name <version_name> -vm <machine_name>
 ```
-The configuration file is located at ~/.encap/config.yml:
+The configuration file is located at `~/.encap/config.yml`:
 ```yml
 file_extension:
   py: python -u
   sh: bash
 
 projects:
-   <dir in local machine>:
-    dir: <dir in remote machine>
+   <dir_in_local_machine>:
+    dir: <dir_in_remote_machine>
     ssh:
       user: <username>
-      <machine name>:
+      <machine_name>:
         ip: <ip>
 ```
-### SSH output to be ignored.
+### Ignore SSH output
 ```yml
 ssh_ignore: ["X11 forwarding request failed on channel"]
 ```
-### Folders to be ignored while rsyncing between local and remote machine
+
+### Ignore folders while rsyncing between local and remote machine
 ```yml
 rsync_exclude: [".git", "*log*"]
 ```
 
 ## Configuring Google Cloud
 TODO
+
+That's an overview of the main features and configurations for the Encap tool. You can use it to efficiently manage your computational experiments and ensure that your results are reproducible. If you have any questions, or want to contribute to the project, feel free to leave an issue.
