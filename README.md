@@ -153,7 +153,7 @@ See `/examples/slurm_test.py` for more details.
 
 The configuration file is located at `~/.encap/config.yml`.
 
-Example config file for restarting a Slurm job if it did not exit successfully:
+Example config file for a Slurm job:
 ```yml
 file_extension:
   py: python -u
@@ -164,16 +164,29 @@ slurm:
   cpus-per-task: 256 # How many CPUs to allocate to each of your experiments
   ntasks-per-node: 1 # How many copies of your experiment to start per node
   time: "24:00:00" # Time until your job is terminated by Slurm
-  code: # Optional
-    - timeout 23h srun bash {run.sh}
-    - if [[ $? -eq 124 ]]; then # Warning: this will rerun your code if it did not finish successfully after 23h
-    - sbatch {run.slurm}
-    - fi
 ```
 
-In this example, `{run.sh}` and `{run.slurm}` will be replaced with the actual script and Slurm file automatically upon execution.
-
 If you want to execute different Slurm instances in parallel, use the `-sl_i <i>` argument. This will create *i* different Slurm jobs.
+
+### Adavnced Configurations
+You can create custom code to be executed within the Slurm file. For example, you may need to restart a Slurm job if it doesn't complete successfully within the allowed time. Here's a sample configuration file that restarts the Slurm job up to two additional times if it fails to complete:
+```yml
+slurm:
+  account: <account>
+  partition: <partition>
+  cpus-per-task: 256 # How many CPUs to allocate to each of your experiments
+  ntasks-per-node: 1 # How many copies of your experiment to start per node
+  time: "24:00:00" # Time until your job is terminated by Slurm
+  code:
+    - SLURM_RESTARTNR=$((SLURM_RESTARTNR + 1))
+    - timeout 23h srun python sleep.py
+    - if [ $? -eq 124 ] && [ $SLURM_RESTARTNR -lt 3 ]; then
+    - sbatch --export=SLURM_RESTARTNR=$SLURM_RESTARTNR test.sh
+    - fi
+```
+This configuration is useful if your job needs to run for longer than the maximum time allowed by your Slurm system. The job will be run up to three times in total, including two restarts, and it is up to you to save and reload the current state of your computational experiment.
+
+In this example, `{run.sh}` and `{run.slurm}` will be replaced by encap with the actual script and Slurm file automatically upon execution.
 
 ## Nesting Configuration Files
 
