@@ -179,9 +179,9 @@ slurm:
   time: "24:00:00" # Time until your job is terminated by Slurm
   code:
     - SLURM_RESTARTNR=$((SLURM_RESTARTNR + 1))
-    - timeout 23h srun python sleep.py
-    - if [ $? -eq 124 ] && [ $SLURM_RESTARTNR -lt 3 ]; then
-    - sbatch --export=SLURM_RESTARTNR=$SLURM_RESTARTNR test.sh
+    - timeout 23.5h srun bash {run.sh} # Time until the job is terminated by timeout
+    - if [ $? -eq 124 ] && [ $SLURM_RESTARTNR -lt 3 ]; then # Number of repetitions
+    - sbatch --export=SLURM_RESTARTNR=$SLURM_RESTARTNR {run.slurm}
     - fi
 ```
 This configuration is useful if your job needs to run for longer than the maximum time allowed by your Slurm system. The job will be run up to three times in total, including two restarts, and it is up to you to save and reload the current state of your computational experiment.
