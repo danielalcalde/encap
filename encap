@@ -109,6 +109,9 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
     """)
     if not ("i" in slurm_settings):
         slurm_settings["i"] = 1
+    
+    if not ("ntasks-per-node" in slurm_settings):
+        slurm_settings["ntasks-per-node"] = 1
 
     if isinstance(slurm_settings["i"], int):
         iterator = range(slurm_settings["i"])

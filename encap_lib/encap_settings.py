@@ -2,6 +2,7 @@ import os
 import yaml
 import sys
 import encap_lib
+import copy
 
 def read_terminal_arguments(pargs):
     global args_config, config, using_slurm
@@ -28,7 +29,7 @@ def read_terminal_arguments(pargs):
     if pargs.interpreter is not None:
         args_config["interpreter"] = pargs.interpreter
     
-    config = merge_dicts(config, args_config)
+    config = merge_dicts(config, copy.deepcopy(args_config))
 
 
 def read_config_file(file_name):
@@ -69,7 +70,7 @@ def load_encap_config_files_recursive(path):
         config = merge_dicts(config, config_patch)
     
     # Reload config with command line arguments in case they overwrite config file settings
-    merge_dicts(config, args_config)
+    merge_dicts(config, copy.deepcopy(args_config))
 
 def merge_dicts(dict1, dict2):
     """Merge two dictionaries"""
