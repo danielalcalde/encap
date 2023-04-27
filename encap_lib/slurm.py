@@ -132,6 +132,9 @@ def initialize_slurm_settings(pargs):
 
     if pargs.sl_cpus is not None:
         slurm_settings["cpus-per-task"] = pargs.sl_cpus
+    
+    if pargs.sl_nice is not None:
+        slurm_settings["nice"] = pargs.sl_nice
 
     if pargs.sl_i is not None:
         slurm_settings["i"] = pargs.sl_i
