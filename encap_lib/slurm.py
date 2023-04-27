@@ -38,8 +38,8 @@ def generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_fil
             if key.lower() == "cpus-per-task":
                 bash_code += "export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK\n"
     
-    if not ("time" in slurm_settings):
-        assert False, "No time specified in slurm settings."
+    #if not ("time" in slurm_settings):
+    #    assert False, "No time specified in slurm settings."
     
     if slurm_settings.get("code") is None:
         bash_code += f"srun bash {executable_file_name}"
