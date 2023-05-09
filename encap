@@ -35,15 +35,18 @@ def run(machine, file_extension, args, run_folder_name, target_file, target_file
     """
     machine.push(target_file_path, target_file_path, directory=False, verbose=True)
 
-    # Get interpreter from file extension
-    interpreter = get_interpreter_from_file_extension(file_extension, ignore_file_extensior_if_interpreter_set_in_settings=True)
-
     # Check if the files is executable, if yes then run it directly
     is_executable = os.access(target_file_path, os.X_OK)
+
+    # Get interpreter from file extension
+    interpreter = get_interpreter_from_file_extension(file_extension, ignore_file_extensior_if_interpreter_set_in_settings=True, error_if_not_found=not is_executable)
 
     # Give warning if an interpreter is set in the settings file
     if is_executable and "interpreter" in settings.config:
         warnings.warn(f"WARNING: 'interpreter' is set in the settings files, but your file is executable. The interpreter in the (settings file)/(command line) will be ignored.", UserWarning)
+    
+    if is_executable and interpreter != "":
+        warnings.warn(f"WARNING: Your file is executable, but the interpreter {interpreter} could be infered. The file will be executed, make sure that this is what you want!", UserWarning)
 
     if isinstance(number_of_instances, int):
         iterator = range(number_of_instances)

@@ -105,16 +105,22 @@ def get_machine(vm, local_project_dir):
     
     return machine
 
-def get_interpreter_from_file_extension(f, ignore_file_extensior_if_interpreter_set_in_settings=False):
+def get_interpreter_from_file_extension(f, ignore_file_extensior_if_interpreter_set_in_settings=False, error_if_not_found=True):
     if ignore_file_extensior_if_interpreter_set_in_settings:
         if "interpreter" in settings.config:
             return settings.config["interpreter"]
     
     if f == "":
         return ""
-    assert f in settings.config["file_extension"], f"{f} is not a file extension that is present in your config file."
     
-    return settings.config["file_extension"][f]
+    if f in settings.config["file_extension"]:
+        return settings.config["file_extension"][f]
+    
+    if error_if_not_found:
+        raise ValueError(f"{f} is not a file extension that is present in your config file.")
+    
+    return ""
+    
     
 
 def filename_and_file_extension(a):
