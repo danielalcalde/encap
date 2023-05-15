@@ -163,7 +163,10 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
         machine.write_file(runslurm_file_name, code, verbose=True)
 
         # Run the slurm file
-        machine.run_code(f"sbatch {runslurm_file_name}", verbose=True)
+        out = machine.run_code(f"sbatch {runslurm_file_name}", verbose=True)
+        if "sbatch: command not found" in out[0]:
+            print("Error: Slurm does not seem to be installed on this machine.")
+            exit(1)
     return log_file_name
 
 def get_script_name(run_folder_name, script_name):
