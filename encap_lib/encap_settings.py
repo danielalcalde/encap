@@ -12,13 +12,15 @@ def read_terminal_arguments(pargs):
     if slurm_conf is not None:
         args_config["slurm"] = slurm_conf
         using_slurm = True
-        assert pargs.i == 1, "The -i flag is not supported when using slurm."
+        assert pargs.i == None, "The -i flag is not supported when using slurm."
     
-    if pargs.i != 1:
+    if pargs.i != None:
         if not isinstance(pargs.i, int):
             pargs.i = list(pargs.i)
         
         args_config["i"] = pargs.i
+    else:
+        args_config["i"] = 1
     
     if pargs.args is not None:
         args_config["args"] = pargs.args
