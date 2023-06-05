@@ -5,6 +5,7 @@ import os
 import warnings
 import random
 from encap_lib.machines import run_code_local
+from filelock import FileLock
 
 def get_current_commit_hash(path):
     repo = Repo(path)
@@ -45,9 +46,12 @@ def get_current_commit_hashes(git_track, force=False, **kwargs):
 
 # Functions to support automatic git tracking on the fly on an branch called "encap" which is mounted as a worktree
 def sync_with_encap_branch(repo, **kwargs):
-    encap_worktree = make_worktree(repo)
-    commit = sync_encap_worktree(repo, encap_worktree, **kwargs)
-    delete_worktree(repo, encap_worktree)
+    file_lock = os.path.join(repo.git_dir, "encap_worktree_lock")
+    with FileLock(file_lock):
+        encap_worktree = make_worktree(repo)
+        commit = sync_encap_worktree(repo, encap_worktree, **kwargs)
+        delete_worktree(repo, encap_worktree)
+    
     return commit
 
 def sync_encap_worktree(repo, encap_worktree, commit_message="Automatic commit from encap", verbose=False):
