@@ -53,10 +53,29 @@ def get_status(vms):
     pool = ThreadPoolExecutor(9)
     machines = pool.map(fabric_wrapper.SSHMachine, vms)
     
-    code =""" python -c "import psutil; print(max(psutil.cpu_percent(interval=10, percpu=True)))" """
+    code ="""python -c "import psutil, pwd, os
+print(max(psutil.cpu_percent(interval=10, percpu=True)))
+# Refresh
+processes = list(psutil.process_iter(['pid', 'name', 'cpu_percent', 'uids']))
+
+current_pid = os.getpid()
+
+# Get all running processes except the current one
+processes = (proc for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'uids']) if proc.info['pid'] != current_pid)
+
+# Find the process with the highest CPU usage
+max_cpu_process = max(processes, key=lambda p: p.info['cpu_percent'])
+
+# Get the UID of the owner of the process
+uid = max_cpu_process.info['uids'].real
+
+# Get the username corresponding to the UID
+username = pwd.getpwuid(uid).pw_name
+print(username)" """
+
     procs = [machine.run_code(code, wait=False) for machine in machines if machine.conn is not None]
     
-    return [fabric_wrapper.follow_output(proc, verbose=False)[0] for proc in procs]
+    return [fabric_wrapper.follow_output(proc, verbose=False) for proc in procs]
 
 
 if pargs.debug:
@@ -70,9 +89,12 @@ localmachine = LocalMachine(local_project_dir)
 if pargs.mode == "status":
     if "-" in pargs.vm and "{" in pargs.vm:
         vms = extract_hosts(pargs.vm)
-        percents = get_status(vms)
-        for vm, percent in zip(vms, percents):
-            print(f"{vm}: {percent}")
+        percents_and_names = get_status(vms)
+        for vm, (percent, name) in zip(vms, percents_and_names):
+            if float(percent) < 10:
+                print(f"\033[1m{vm}: {percent} free\033[0m")
+            else:
+                print(f"{vm}: {percent} {name}")
         
     exit()
 
