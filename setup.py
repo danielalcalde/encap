@@ -19,5 +19,5 @@ setuptools.setup(
          "Programming Language :: Python :: 3",
          "License :: OSI Approved :: MIT License",
      ],
-     install_requires=["pyyaml>=5.1", "fabric", "GitPython", "psutil", "tabulate"],
+     install_requires=["pyyaml>=5.1", "fabric", "GitPython", "psutil", "tabulate", "filelock"],
  )
