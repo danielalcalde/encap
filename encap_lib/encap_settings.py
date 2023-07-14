@@ -41,6 +41,9 @@ def read_config_file(file_name):
         except yaml.YAMLError as exc:
             print("Error in configuration file")
             sys.exit(exc)
+    if config_ is None:
+        config_ = dict()
+    
     return config_
 
 def write_config_file(file_name, settings, comment=""):
@@ -116,22 +119,29 @@ config_items = ["dir", "ip", "sync", "user", "ssh_ignore", "ssh_options", "sync_
                 "rsync_exclude", "project", "zone", "nfs", "machine_config",
                 "GOOGLE_APPLICATION_CREDENTIALS", "machine_config", "slurm"]
 
+default_extensions = {"py": "python -u", "sh": "bash", "jl": "julia"}
+
 # If .encap does not exist
 if not os.path.isdir(config_folder):
     os.mkdir(config_folder)
 
 # If .encap/config.yml does not exist
 if not os.path.isfile(config_file_name):
-    f = {"py": "python -u", "sh": "bash", "jl": "julia"}
-    d = {"file_extension": f}
+    config = {"file_extension": default_extensions}
     with open(config_file_name, 'w') as ymlfile:
-        yaml.dump(d, ymlfile, default_flow_style=False)
+        yaml.dump(config, ymlfile, default_flow_style=False)
 
 
 path = os.getcwd()
 
 # Open config file
 config = read_config_file(config_file_name)
+if not ("file_extension" in config):
+    print("There are no registered file_extension in you config file. The default ones were added!")
+    config["file_extension"] = default_extensions
+    with open(config_file_name, 'w') as ymlfile:
+        yaml.dump(config, ymlfile, default_flow_style=False)
+
 args_config = dict()
 
 debug = False
