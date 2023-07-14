@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='encap',
-     version='{{VERSION_PLACEHOLDER}}',
+     version='0.3',
      scripts=['encap', "etool"],
      author="Daniel Alcalde Puente",
      author_email="d.alcalde.puente@fz-juelich.de",
