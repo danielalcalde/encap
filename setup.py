@@ -5,11 +5,11 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='encap',
-     version='0.2.0',
-     scripts=['encap', "etool"] ,
+     version='{{VERSION_PLACEHOLDER}}',
+     scripts=['encap', "etool"],
      author="Daniel Alcalde Puente",
      author_email="d.alcalde.puente@fz-juelich.de",
-     description="A versioning tool for scientific computing experiments.",
+     description="A Simple Tool for Managing Computational Experiments.",
      long_description=long_description,
    long_description_content_type="text/markdown",
      url="https://github.com/danielalcalde/encap",
