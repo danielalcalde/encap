@@ -218,7 +218,7 @@ class LocalMachine(Machine):
         pass
 
 
-def run_code_local(command, output=True, verbose=False, wait=True, debug=False, ignore=[]):
+def run_code_local(command, output=True, verbose=False, wait=True, ignore_errors=False, debug=False, ignore=[]):
     if settings.debug:
         debug = True
 
@@ -240,7 +240,11 @@ def run_code_local(command, output=True, verbose=False, wait=True, debug=False, 
         except KeyboardInterrupt:
             p.kill()
             exit()
-        
+
+        if not ignore_errors and p.returncode != 0:
+            raise Exception(f"""An error ocured while executing: {command} 
+{lines}""")
+
         return lines
 
     else:
