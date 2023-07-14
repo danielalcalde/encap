@@ -15,7 +15,7 @@ Encap currently supports:
 * Running experiments on Slurm
 * Running experiments remotely via SSH
 
-Please note that Encap is currently incompatible with macOS/Windows.
+Please note that Encap is currently only compatible with Linux/MacOs.
 
 ## Running a Script with Encap
 
