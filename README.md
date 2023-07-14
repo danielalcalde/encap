@@ -15,7 +15,7 @@ Encap currently supports:
 * Running experiments on Slurm
 * Running experiments remotely via SSH
 
-Please note that Encap is currently only compatible with Linux/MacOs.
+Note that Encap is currently only compatible with Linux/macOS.
 
 ## Running a Script with Encap
 
@@ -70,7 +70,7 @@ And the following three files will be generated:
 ## Installation
 To install Encap, use the following command:
 ```bash
-pip install git+https://github.com/danielalcalde/encap
+pip install encap
 ```
 
 ## Accessing Help
