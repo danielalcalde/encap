@@ -368,17 +368,17 @@ kill: Kills the running experiment. Note that if the flag -i is specified, then 
 
     """))
 
-    parser.add_argument("target", nargs="?", help="Name of the file to run.", default=None)
-    parser.add_argument("-n", "--name", dest="name", help="Experiment name.", default=None)
-    parser.add_argument("-cn", "--copy-name", dest="copy_name", help="Experiment to copy from.", required=False, default=None)
-    parser.add_argument("-args", "--args", dest="args", help="Arguments passed to the programm.", default=None)
-    parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the VM.", default=None)
-    parser.add_argument("-sn", "--script_name", dest="script_name", help="In case it is run on a folder this specifies the file that should be run. The default behaviour is to search for a file run.*.", default=None)
-    parser.add_argument("-i", "--number_of_instances", dest="i", help="Number of instances to start in parallel. For each instance an enviromental variable ENCAP_PROCID=<instance_number> will be set. You can also pass a list or any python expression as a string. If you pass a list it will run the instances in that list. Example: -i [0, 2, 3] or range(5, 20). Similar to -sl_i in slurm mode.", default=None, type=eval)
-    parser.add_argument("-int", "--interpreter", dest="interpreter", help="The interpreter to use. Default is to infer it from the file extension.", default=None)
+    parser.add_argument("target", nargs="?", help="Name of the target file to run.", default=None)
+    parser.add_argument("-n", "--name", dest="name", help="Name of the experiment.", default=None)
+    parser.add_argument("-cn", "--copy-name", dest="copy_name", help="Name of the experiment to copy from.", required=False, default=None)
+    parser.add_argument("-args", "--args", dest="args", help="SArguments for the interpreter, forming `<interpreter> <file_name> <args>`.", default=None)
+    parser.add_argument("-vm", "--vm_name", dest="vm", help="Name of the Virtual Machine (VM).", default=None)
+    parser.add_argument("-sn", "--script_name", dest="script_name", help="Specify the script file to run when a folder is targeted. Default behavior is to find a file named `run.*`.", default=None)
+    parser.add_argument("-i", "--number_of_instances", dest="i", help="Specify the number of instances to initiate concurrently. Each instance will have an associated environment variable, ENCAP_PROCID=<instance_number>. This option accepts either an integer, list or a Python expression in string format. When a list is provided, instances corresponding to the list items are initiated. Examples: -i '[0, 2, 3]' or -i 'range(5, 20)'. This feature is similar to -sl_i in Slurm mode.", default=None, type=eval)
+    parser.add_argument("-int", "--interpreter", dest="interpreter", help="Specify the interpreter. If not provided, it's inferred from the file extension.", default=None)
 
     # Slurm arguments
-    parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Run the job on slurm. If any slurm option is used this is True by default.", default=False)
+    parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Flag to run the job on Slurm. If any Slurm option is used, this flag is automatically set to True.", default=False)
     parser.add_argument("-sl_nodes", "--slurm_nodes", dest="sl_nodes", help="Number of nodes to start in slurm. - nodes", default=None, type=int)
     parser.add_argument("-sl_ntpn", "--slurm_ntasks-per-node", dest="sl_ntpn", help="Number of tasks per node to start in slurm. - ntasks-per-node", default=None, type=int)
     parser.add_argument("-sl_time", "--slurm_time", dest="sl_time", help="Time to run the job in slurm. - time", default=None)
