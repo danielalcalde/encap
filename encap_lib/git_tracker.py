@@ -104,9 +104,12 @@ def make_worktree(repo):
         pass
     
     if worktree_folder in repo.git.worktree("list"):
-        warnings.warn(f"WARNING: Worktree {worktree_folder} already exists. This might be due to a previous unexpected termination of encap.")
+        warnings.warn(f"Worktree {worktree_folder} already exists. This might be due to a previous unexpected termination of encap.")
     else:
-        repo.git.worktree("add", worktree_folder, "encap")
+        try:
+            repo.git.worktree("add", worktree_folder, "encap")
+        except git.GitCommandError as e:
+            warnings.warn(f"Worktree {worktree_folder} already exists. This might be due to a previous unexpected termination of encap.")
 
     worktree_repo = Repo(worktree_folder)
     worktree_repo.git.checkout("encap") # Just in case
