@@ -102,14 +102,16 @@ def make_worktree(repo):
         print("encap branch created in git repo", repo.working_dir)
     except git.GitCommandError as e:
         pass
-    
-    if worktree_folder in repo.git.worktree("list"):
+
+    if "encap_worktree" in repo.git.worktree("list"):
         warnings.warn(f"Worktree {worktree_folder} already exists. This might be due to a previous unexpected termination of encap.")
-    else:
-        try:
-            repo.git.worktree("add", worktree_folder, "encap")
-        except git.GitCommandError as e:
-            warnings.warn(f"Worktree {worktree_folder} already exists. This might be due to a previous unexpected termination of encap.")
+        worktree_repo = Repo(worktree_folder)
+        delete_worktree(repo, worktree_repo)
+
+    try:
+        repo.git.worktree("add", worktree_folder, "encap")
+    except git.GitCommandError as e:
+        warnings.warn(f"Error adding {worktree_folder}. This might be due to a previous unexpected termination of encap. Try removing the worktree manually. The error was:\n {e}")
 
     worktree_repo = Repo(worktree_folder)
     worktree_repo.git.checkout("encap") # Just in case
@@ -118,6 +120,7 @@ def make_worktree(repo):
 
 def delete_worktree(repo, worktree_repo):
     repo.git.worktree("remove", worktree_repo.working_dir)
+    repo.git.worktree("prune")
 
 
 def get_stash(repo):

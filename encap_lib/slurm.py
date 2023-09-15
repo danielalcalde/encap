@@ -47,6 +47,8 @@ def generate_code_for_slurm_script(run_folder_name, slurm_settings, runslurm_fil
         c = slurm_settings.get("code")
         
         if isinstance(c, list):
+            for ci in c:
+                assert isinstance(ci, str), f"The code in the slurm settings must be a string or a list of strings. {ci} is not a string."
             c = "\n".join(c) 
 
         c = c.replace("{run_folder_name}", run_folder_name)
