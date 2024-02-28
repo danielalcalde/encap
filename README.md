@@ -134,6 +134,19 @@ file_extension:
 encap run my_script.go -n <version> --interpreter "go run"
 ```
 
+## Archive Mode - tar/untar
+To tar an experiment, use the following command:
+```bash
+encap tar scripts/my_script.py -n test
+```
+This command creates a tar.gz file of the experiment folder and saves it. To untar the experiment, use the following command:
+```bash
+encap untar scripts/my_script.py -n test
+```
+If all experiments should be tarred remove the `-n` argument.
+```bash
+encap untar scripts/my_script.py
+```
 ## Configuring Slurm
 
 Encap can also work with Slurm. To run your experiment using Slurm, execute the following command:

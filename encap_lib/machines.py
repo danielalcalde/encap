@@ -1,4 +1,6 @@
 import subprocess
+import threading
+from multiprocessing.pool import ThreadPool
 import os
 from getpass import getuser
 import encap_lib.encap_settings as settings
@@ -12,6 +14,51 @@ class Machine:
         echo -e {repr(content)} > "{name}"
         """
         return self.run_code(command, *args, **kwargs)
+    
+    def tar(self, directory, parallel=True, verbose=False, subfolders=False, threads=1):
+        if subfolders:
+            # Create a list of all subfolders
+            dirs = self.run_code(f"find {directory} -maxdepth 1 -type d")[1:]
+            if threads == 1:
+                for d in dirs:
+                    if d != "" and d != directory:
+                        out = self.tar(d, parallel=parallel, verbose=verbose, subfolders=False)
+            else:
+                threads = min(threads, len(dirs))
+                pool = ThreadPool(threads)
+                out = pool.map(lambda x: self.tar(x, parallel=parallel, verbose=verbose, subfolders=False), dirs)
+        else:
+            if verbose:
+                print(f"Creating tar file {directory}.tar.gz")
+            if parallel:
+                out = self.run_code(f"tar --use-compress-program=pigz -cf {directory}.tar.gz {directory}")
+            else:
+                out = self.run_code(f"tar -czf {directory}.tar.gz {directory}")
+            
+            self.run_code(f"rm -rf {directory}")
+        return out
+    
+    def untar(self, directory, parallel=True, verbose=False, subfiles=False, threads=1):
+        if subfiles:
+            files = self.run_code(f"find {directory} -maxdepth 1 -type f -name '*.tar.gz'")
+            folders = [f[:-7] for f in files]
+            if threads == 1:
+                for f in folders:
+                    if f != "":
+                        out = self.untar(f, parallel=parallel, verbose=verbose, subfiles=False)
+            else:
+                threads = min(threads, len(folders))
+                pool = ThreadPool(threads)
+                out = pool.map(lambda x: self.untar(x, parallel=parallel, verbose=verbose, subfiles=False), folders)
+        else:
+            if verbose:
+                print(f"Extracting tar file {directory}.tar.gz")
+            if parallel:
+                out = self.run_code(f"tar --use-compress-program=pigz -xf {directory}.tar.gz")
+            else:
+                out = self.run_code(f"tar -xzf {directory}.tar.gz")
+            self.run_code(f"rm -f {directory}.tar.gz")
+        return out
 
     def run_code(self, command, *args, **kwargs):
         pass

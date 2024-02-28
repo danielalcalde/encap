@@ -358,14 +358,16 @@ def parse_arguments():
     import textwrap
 
     parser = ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("mode", help=textwrap.dedent("""The mode of the program. Either run, rerun, tail, copy, status or kill.
+    parser.add_argument("mode", help=textwrap.dedent("""The mode of the program. Either run, rerun, tail, copy, status, kill, tar or untar.
 run: Copies the target file into the experiment and runs it.
 rerun: Reruns the target file in the experiment without copying.
 tail: Tails the log file of the experiment.
 copy: Copies the experiment specifeid with -cn into the experiment specified with -n.
 status: Prints the status of all the experiments running on the machine.
 kill: Kills the running experiment. Note that if the flag -i is specified, then only the instance/list of instances specified by -i is killed. Else all instances if -i is not specified.
-
+tar: Tars the experiment, if -n is not specified, all experiments are tarred.
+untar: Untars the experiment, if -n is not specified, all experiments are untarred.
+                                                     
     """))
 
     parser.add_argument("target", nargs="?", help="Name of the target file to run.", default=None)
@@ -376,6 +378,7 @@ kill: Kills the running experiment. Note that if the flag -i is specified, then 
     parser.add_argument("-sn", "--script_name", dest="script_name", help="Specify the script file to run when a folder is targeted. Default behavior is to find a file named `run.*`.", default=None)
     parser.add_argument("-i", "--number_of_instances", dest="i", help="Specify the number of instances to initiate concurrently. Each instance will have an associated environment variable, ENCAP_PROCID=<instance_number>. This option accepts either an integer, list or a Python expression in string format. When a list is provided, instances corresponding to the list items are initiated. Examples: -i '[0, 2, 3]' or -i 'range(5, 20)'. This feature is similar to -sl_i in Slurm mode.", default=None, type=eval)
     parser.add_argument("-int", "--interpreter", dest="interpreter", help="Specify the interpreter. If not provided, it's inferred from the file extension.", default=None)
+    parser.add_argument("-tar_cpus", "--tar_cpus", dest="tar_cpus", help="Number of cpus to use when tarring several experiments. Default is 1.", default=1, type=int)
 
     # Slurm arguments
     parser.add_argument("-sl", "--slurm", action="store_true", dest="slurm", help="Flag to run the job on Slurm. If any Slurm option is used, this flag is automatically set to True.", default=False)
@@ -413,7 +416,7 @@ kill: Kills the running experiment. Note that if the flag -i is specified, then 
         assert pargs.mode == "status", "No target specified."
     
     if pargs.name is None:
-        assert pargs.mode == "status", "encap: error: the following arguments are required: -n/--name"
+        assert pargs.mode == "status" or pargs.mode == "tar" or pargs.mode == "untar", "encap: error: the following arguments are required: -n/--name"
     
     if pargs.mode == "copy":
         assert pargs.copy_name is not None, "You need to specify a experiment to copy from with -cn."
@@ -442,7 +445,6 @@ def main():
         slurm.print_slurm_status_if_using_slurm(machine)
         exit()
 
-
     source_file_path = pargs.target
     # Check if it will run in folder mode or file mode
     if os.path.isdir(source_file_path):
@@ -452,7 +454,7 @@ def main():
         root_path, folder_name = extract_folder_name(source_file_path)
 
         folder_name = os.path.join(root_path, "0encap_folder", folder_name)
-        run_folder_name = os.path.join(folder_name, pargs.name)
+        run_folder_name = os.path.join(folder_name, str(pargs.name))
 
         is_file = False
 
@@ -462,7 +464,7 @@ def main():
         # Get the file name
         script_name = os.path.basename(source_file_path)
 
-        run_folder_name = os.path.join(folder_name, pargs.name)
+        run_folder_name = os.path.join(folder_name, str(pargs.name))
         settings.config["script_name"] = script_name
         target_file_path = os.path.join(run_folder_name, script_name)
         is_file = True
@@ -549,6 +551,18 @@ encap rerun {pargs.target} -n {pargs.name}""")
         for pid in encap_process_dict:
             code += f"kill {pid}; "
         machine.run_code(code, verbose=True)
+    
+    elif pargs.mode == "tar":
+        if pargs.name is not None:
+            machine.tar(run_folder_name, verbose=True)
+        else:
+            machine.tar(folder_name, verbose=True, subfolders=True, threads=pargs.tar_cpus)
+
+    elif pargs.mode == "untar":
+        if pargs.name is not None:
+            machine.untar(run_folder_name, verbose=True)
+        else:
+            machine.untar(folder_name, verbose=True, subfiles=True, threads=pargs.tar_cpus)
 
     elif pargs.mode == "pull":
         assert pargs.name is not None, "The experiment_name -n must be specified."
