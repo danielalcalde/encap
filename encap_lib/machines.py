@@ -19,12 +19,14 @@ class Machine:
         if subfolders:
             # Create a list of all subfolders
             dirs = self.run_code(f"find {directory} -maxdepth 1 -type d")[1:]
-            if threads == 1:
+            threads = min(threads, len(dirs))
+            if threads <= 1:
+                out = []
                 for d in dirs:
                     if d != "" and d != directory:
-                        out = self.tar(d, parallel=parallel, verbose=verbose, subfolders=False)
+                        out_ = self.tar(d, parallel=parallel, verbose=verbose, subfolders=False)
+                        out.append(out_)
             else:
-                threads = min(threads, len(dirs))
                 pool = ThreadPool(threads)
                 out = pool.map(lambda x: self.tar(x, parallel=parallel, verbose=verbose, subfolders=False), dirs)
         else:
@@ -42,12 +44,14 @@ class Machine:
         if subfiles:
             files = self.run_code(f"find {directory} -maxdepth 1 -type f -name '*.tar.gz'")
             folders = [f[:-7] for f in files]
-            if threads == 1:
+            threads = min(threads, len(folders))
+            if threads <= 1:
+                out = []
                 for f in folders:
                     if f != "":
-                        out = self.untar(f, parallel=parallel, verbose=verbose, subfiles=False)
+                        out_ = self.untar(f, parallel=parallel, verbose=verbose, subfiles=False)
+                        out.append(out_)
             else:
-                threads = min(threads, len(folders))
                 pool = ThreadPool(threads)
                 out = pool.map(lambda x: self.untar(x, parallel=parallel, verbose=verbose, subfiles=False), folders)
         else:
