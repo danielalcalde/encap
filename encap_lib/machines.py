@@ -269,7 +269,7 @@ class LocalMachine(Machine):
         pass
 
 
-def run_code_local(command, output=True, verbose=False, wait=True, ignore_errors=False, debug=False, ignore=[]):
+def run_code_local(command, output=True, verbose=False, wait=True, ignore_errors=False, debug=False, ignore=[], get_returncode=False):
     if settings.debug:
         debug = True
 
@@ -295,7 +295,9 @@ def run_code_local(command, output=True, verbose=False, wait=True, ignore_errors
         if not ignore_errors and p.returncode != 0:
             raise Exception(f"""An error ocured while executing: {command} 
 {lines}""")
-
+        if get_returncode:
+            return lines, retval
+    
         return lines
 
     else:

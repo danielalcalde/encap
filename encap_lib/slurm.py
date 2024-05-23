@@ -186,8 +186,8 @@ def print_slurm_status_if_using_slurm(machine):
     #squeue --me  --sort=+j --format="%.10i %.9P %.90j %.9u %.3t %.6M %.6D %R"
 
     # Check if sqeue is installed
-    out = machine.run_code("which squeue")
-    if out == "":
+    out, rcode = machine.run_code("which squeue", get_returncode=True, ignore_errors=True)
+    if out == "" or rcode != 0:
         return None
     
     # Get the slurm status
