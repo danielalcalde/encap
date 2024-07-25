@@ -112,9 +112,9 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
 
     # Delete previous log file and create a new one
     machine.run_code(f"""rm {run_folder_name}/pid -f
-    rm {run_folder_name}/slurm_files/log* -f
+    rm {run_folder_name}/.slurm_files/log* -f
     touch {run_folder_name}/log
-    mkdir -p {run_folder_name}/slurm_files
+    mkdir -p {run_folder_name}/.slurm_files
     """)
     if not ("i" in slurm_settings):
         slurm_settings["i"] = 1
@@ -141,9 +141,9 @@ def run_slurm(machine, file_extension, target, args, run_folder_name, target_fil
             machine.run_code(f"""rm {run_folder_name}/{log_file_name} -f
                                  touch {run_folder_name}/{log_file_name }""")
         
-        runslurm_file_name = f"{run_folder_name}/slurm_files/run{slurm_instance_text}.slurm"
-        executable_file_name = f"{run_folder_name}/slurm_files/run{slurm_instance_text}.sh"
-        log_file_name_slurm = f"{run_folder_name}/slurm_files/log{slurm_instance_text}.slurm"
+        runslurm_file_name = f"{run_folder_name}/.slurm_files/run{slurm_instance_text}.slurm"
+        executable_file_name = f"{run_folder_name}/.slurm_files/run{slurm_instance_text}.sh"
+        log_file_name_slurm = f"{run_folder_name}/.slurm_files/log{slurm_instance_text}.slurm"
 
         # Script to run the file and save outputs in log
         code, args_replace = slurm.generate_slurm_executable(file_extension, run_folder_name, target_file_path, args, target_file=target_file, slurm_instance=i, ntpn=slurm_settings["ntasks-per-node"])
