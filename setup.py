@@ -8,7 +8,7 @@ setuptools.setup(
      version='0.5',
      scripts=['encap', "etool"],
      author="Daniel Alcalde Puente",
-     author_email="d.alcalde.puente@fz-juelich.de",
+     author_email="d.alcalde.puente@gmail.com",
      description="A Simple Tool for Managing Computational Experiments.",
      long_description=long_description,
    long_description_content_type="text/markdown",
