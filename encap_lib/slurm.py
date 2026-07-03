@@ -95,6 +95,7 @@ def generate_slurm_executable(file_extension, run_folder_name, target_file_path,
     else
         log="log_$ENCAP_PROCID"
     fi
+    export ENCAP_LOG="$PWD/$log"
     echo $log
 
     echo "Slurm Job Id: $SLURM_JOB_ID" &> $log

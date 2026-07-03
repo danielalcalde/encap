@@ -32,7 +32,7 @@ def test_file_mode(tmp_path, mocker, monkeypatch):
     
     # Setup test file
     test_file = tmp_path / "test_script.py"
-    test_file.write_text("print('hello from file mode')")
+    test_file.write_text("import os; print('hello from file mode'); print(f'ENCAP_LOG={os.environ.get(\"ENCAP_LOG\")}')")
     
     # Change cwd to tmp_path and patch sys.argv
     monkeypatch.chdir(tmp_path)
@@ -53,7 +53,9 @@ def test_file_mode(tmp_path, mocker, monkeypatch):
     import time
     time.sleep(0.5)
     
-    assert "hello from file mode" in log_file.read_text()
+    log_content = log_file.read_text()
+    assert "hello from file mode" in log_content
+    assert f"ENCAP_LOG={log_file.absolute()}" in log_content
 
 def test_folder_mode(tmp_path, mocker, monkeypatch):
     encap = load_encap(tmp_path)

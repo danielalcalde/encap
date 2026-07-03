@@ -58,6 +58,7 @@ def generate_pueue_executable(file_extension, run_folder_name, target_file_path,
     else
         log="log_$ENCAP_PROCID"
     fi
+    export ENCAP_LOG="$PWD/$log"
 
     date &>> $log
     echo "host: $(hostname)" &>> $log

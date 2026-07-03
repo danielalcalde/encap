@@ -190,6 +190,7 @@ def run(machine, file_extension, target, args, run_folder_name, target_file, tar
         export ENCAP_PROCID={i}
         export ENCAP_NAME="{run_folder_name}"
         export ENCAP_JOB_NAME="{job_name}"
+        export ENCAP_LOG="$PWD/{log}"
         date &> {log}
         echo "host: $(hostname)" >> {log} 2>&1
         {print_instance}
