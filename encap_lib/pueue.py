@@ -16,7 +16,7 @@ def ensure_daemon_running(machine, auto_start=True):
     
     # Check if pueued is installed
     out_which, rcode_which = machine.run_code("which pueued", get_returncode=True, ignore_errors=True)
-    if rcode_which != 0 or out_which.strip() == "":
+    if rcode_which != 0 or "".join(out_which).strip() == "":
         print("Error: pueued is not installed or not in PATH. Please install pueue.")
         sys.exit(1)
         
